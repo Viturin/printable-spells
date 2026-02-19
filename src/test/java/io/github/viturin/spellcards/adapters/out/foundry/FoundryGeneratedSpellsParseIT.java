@@ -1,6 +1,7 @@
 package io.github.viturin.spellcards.adapters.out.foundry;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -14,7 +15,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FoundryGeneratedSpellsParseTest {
+@Tag("generated-data")
+class FoundryGeneratedSpellsParseIT {
     private static final Path INDEX_PATH = Path.of("src/generated/resources/foundry/spells/index.txt");
 
     @Test
