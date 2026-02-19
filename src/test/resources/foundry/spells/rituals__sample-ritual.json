@@ -1,0 +1,18 @@
+{
+  "_id": "ritual-1",
+  "name": "Sample Ritual",
+  "type": "spell",
+  "system": {
+    "level": { "value": 4 },
+    "description": { "value": "<p>Ritual description.</p>" },
+    "time": { "value": "1 day" },
+    "range": { "value": "" },
+    "target": { "value": "" },
+    "duration": { "value": "", "sustained": false },
+    "traits": {
+      "rarity": "rare",
+      "traditions": [],
+      "value": ["ritual"]
+    }
+  }
+}

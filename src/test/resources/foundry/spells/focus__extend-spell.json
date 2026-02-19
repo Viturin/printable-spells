@@ -1,0 +1,18 @@
+{
+  "_id": "focus-1",
+  "name": "Extend Spell",
+  "type": "spell",
+  "system": {
+    "level": { "value": 3 },
+    "description": { "value": "<p>Extend Spell description.</p>" },
+    "time": { "value": "1" },
+    "range": { "value": "" },
+    "target": { "value": "" },
+    "duration": { "value": "", "sustained": false },
+    "traits": {
+      "rarity": "uncommon",
+      "traditions": [],
+      "value": ["focus", "spellshape"]
+    }
+  }
+}
