@@ -1,0 +1,104 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.2</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.viturin</groupId>
+    <artifactId>spell-cards-from-pf2</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>spell-cards-from-pf2</name>
+    <description>Backend prototype for generating printable PF2 spell card data.</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <main.class>io.github.viturin.spellcards.SpellCardsApplication</main.class>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/generated/resources</directory>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>${main.class}</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>fetch-foundry-data</id>
+            <properties>
+                <foundry.version>v13-dev</foundry.version>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <configuration>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.basedir}/src/generated/resources/foundry/spells</directory>
+                                    <includes>
+                                        <include>*.json</include>
+                                        <include>index.txt</include>
+                                    </includes>
+                                </fileset>
+                                <fileset>
+                                    <directory>${project.basedir}/src/generated/resources/foundry</directory>
+                                    <includes>
+                                        <include>version.txt</include>
+                                    </includes>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>fetch-foundry-spells</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>bash</executable>
+                                    <arguments>
+                                        <argument>${project.basedir}/scripts/fetch_foundry_spells.sh</argument>
+                                        <argument>${foundry.version}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

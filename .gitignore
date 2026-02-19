@@ -1,0 +1,21 @@
+# Build outputs
+/target/
+/build/
+/out/
+/src/generated/resources/
+
+# Local tool caches
+/.m2/
+/.tmp/
+/.cache/
+
+# IDE
+/.idea/
+/.vscode/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
