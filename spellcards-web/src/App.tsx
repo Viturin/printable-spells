@@ -20,6 +20,12 @@ type SpellSearchResponse = {
   nextCursor?: string | null;
 };
 
+type ApiErrorResponse = {
+  code?: string;
+  message?: string;
+  details?: string[];
+};
+
 export function App() {
   const [query, setQuery] = useState("daze");
   const [items, setItems] = useState<SpellSummary[]>([]);
@@ -52,7 +58,9 @@ export function App() {
       const params = new URLSearchParams({ q: trimmed, limit: "20" });
       const response = await fetch(`/api/v1/spells/search?${params.toString()}`, { signal });
       if (!response.ok) {
-        throw new Error(`Search failed (${response.status}).`);
+        setItems([]);
+        setError(await buildErrorMessage(response));
+        return;
       }
 
       const data = (await response.json()) as SpellSearchResponse;
@@ -68,6 +76,43 @@ export function App() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function buildErrorMessage(response: Response): Promise<string> {
+    const fallback = mapStatusToMessage(response.status);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return fallback;
+    }
+
+    try {
+      const errorBody = (await response.json()) as ApiErrorResponse;
+      const message = errorBody.message?.trim();
+      const details = (errorBody.details ?? []).filter((value) => value.trim().length > 0);
+
+      if (message && details.length > 0) {
+        return `${message} (${details.join("; ")})`;
+      }
+      if (message) {
+        return message;
+      }
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function mapStatusToMessage(status: number): string {
+    if (status === 400) {
+      return "Invalid search query.";
+    }
+    if (status === 404) {
+      return "Search endpoint not found.";
+    }
+    if (status >= 500) {
+      return "Server error while searching spells.";
+    }
+    return `Search failed (${status}).`;
   }
 
   return (
