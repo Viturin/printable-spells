@@ -5,11 +5,13 @@ VERSION_INPUT="${1:-latest}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST_DIR="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/spells"
 VERSION_FILE="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/version.txt"
-CACHE_DIR="$ROOT_DIR/.cache/foundry"
-RELEASE_CACHE_DIR="$CACHE_DIR/releases"
+DEST_FILE="$DEST_DIR/spells.json"
+TMP_DIR=""
 
 cleanup() {
-  :
+  if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
 }
 trap cleanup EXIT
 
@@ -64,21 +66,24 @@ extract_spells_json() {
 
 require_cmd curl
 VERSION="$(resolve_version)"
-VERSION_CACHE_DIR="$RELEASE_CACHE_DIR/$VERSION"
-ZIP_FILE="$VERSION_CACHE_DIR/json-assets.zip"
-SPELLS_JSON="$VERSION_CACHE_DIR/spells.json"
-DEST_FILE="$DEST_DIR/spells.json"
 ASSET_URL="https://github.com/foundryvtt/pf2e/releases/download/$VERSION/json-assets.zip"
 
 echo "Using Foundry PF2e release: $VERSION"
-mkdir -p "$VERSION_CACHE_DIR"
 
-if [[ -f "$ZIP_FILE" ]]; then
-  echo "Using cached release asset at $ZIP_FILE"
-else
-  echo "Downloading $ASSET_URL"
-  curl -fL "$ASSET_URL" -o "$ZIP_FILE"
+if [[ -s "$DEST_FILE" && -f "$VERSION_FILE" ]]; then
+  current_version="$(tr -d '[:space:]' < "$VERSION_FILE" || true)"
+  if [[ "$current_version" == "$VERSION" ]]; then
+    echo "Found generated spells for version $VERSION at $DEST_FILE. Skipping download."
+    exit 0
+  fi
 fi
+
+TMP_DIR="$(mktemp -d)"
+ZIP_FILE="$TMP_DIR/json-assets.zip"
+SPELLS_JSON="$TMP_DIR/spells.json"
+
+echo "Downloading $ASSET_URL"
+curl -fL "$ASSET_URL" -o "$ZIP_FILE"
 
 extract_spells_json "$ZIP_FILE" "$SPELLS_JSON"
 
