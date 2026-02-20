@@ -35,6 +35,7 @@ mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run generate:clien
 
 - Fetches PF2e spell data from Foundry release asset `json-assets.zip` (`packs/spells.json`) and stores generated resources in `spellcards-app/src/generated/resources/foundry/`.
 - Uses a pinned Foundry release tag from `spellcards-app/pom.xml` (`foundry.version`).
+- Skips download when generated data already matches the pinned version; `mvn -Pfetch-foundry-data clean` forces a refresh.
 - Loads and parses spells in the backend.
 - Exposes fuzzy search via REST: `GET /api/v1/spells/search`.
 - Provides a frontend for live spell search and card-oriented output.
