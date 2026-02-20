@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "0 7 * * 1"
   workflow_dispatch:
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -11,6 +13,17 @@ permissions:
 
 jobs:
   update-foundry-version:
+    if: >
+      github.event_name != 'issue_comment' ||
+      (
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '/rerun-foundry') &&
+        (
+          github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'COLLABORATOR'
+        )
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -67,5 +80,7 @@ jobs:
 
             - previous: `${{ steps.versions.outputs.current }}`
             - latest: `${{ steps.versions.outputs.latest }}`
+
+            You can manually rerun this check by commenting `/rerun-foundry` on this PR.
           branch: "chore/update-foundry-${{ steps.versions.outputs.latest }}"
           labels: dependencies
