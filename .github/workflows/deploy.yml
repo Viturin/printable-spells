@@ -48,7 +48,7 @@ jobs:
       - name: Build and push app image
         uses: docker/build-push-action@v6
         with:
-          context: ./spellcards-app
+          context: .
           file: ./spellcards-app/Dockerfile
           push: true
           tags: |
@@ -58,7 +58,7 @@ jobs:
       - name: Build and push web image
         uses: docker/build-push-action@v6
         with:
-          context: ./spellcards-web
+          context: .
           file: ./spellcards-web/Dockerfile
           push: true
           tags: |
