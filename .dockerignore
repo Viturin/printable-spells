@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.run
+.m2
+.cache
+.tmp
+build
+target
+**/target
+**/node_modules
+**/dist
+**/.DS_Store
