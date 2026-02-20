@@ -91,7 +91,7 @@
         <profile>
             <id>fetch-foundry-data</id>
             <properties>
-                <foundry.version>latest</foundry.version>
+                <foundry.version>pf2e-7.10.0</foundry.version>
                 <it.includedTags>generated-data</it.includedTags>
             </properties>
             <build>

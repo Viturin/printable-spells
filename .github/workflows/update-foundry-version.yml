@@ -1,0 +1,71 @@
+name: Update Foundry Version
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-foundry-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve versions
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(curl -fsSL https://api.github.com/repos/foundryvtt/pf2e/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          current="$(sed -n 's:.*<foundry.version>\(.*\)</foundry.version>.*:\1:p' spellcards-app/pom.xml | head -n 1)"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          if [[ "$latest" != "$current" ]]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update pinned foundry.version
+        if: steps.versions.outputs.update == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="${{ steps.versions.outputs.latest }}"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          pom = Path("spellcards-app/pom.xml")
+          text = pom.read_text(encoding="utf-8")
+          latest = "${{ steps.versions.outputs.latest }}"
+
+          updated = re.sub(
+              r"<foundry\.version>[^<]+</foundry\.version>",
+              f"<foundry.version>{latest}</foundry.version>",
+              text,
+              count=1,
+          )
+          if updated == text:
+              raise SystemExit("No <foundry.version> property found to update.")
+          pom.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Create pull request
+        if: steps.versions.outputs.update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: bump Foundry PF2e data to ${{ steps.versions.outputs.latest }}"
+          title: "chore: bump Foundry PF2e data to ${{ steps.versions.outputs.latest }}"
+          body: |
+            Automated update of pinned Foundry PF2e release tag.
+
+            - previous: `${{ steps.versions.outputs.current }}`
+            - latest: `${{ steps.versions.outputs.latest }}`
+          branch: "chore/update-foundry-${{ steps.versions.outputs.latest }}"
+          labels: dependencies
