@@ -1,0 +1,8 @@
+services:
+  spellcards-app:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+  spellcards-web:
+    ports:
+      - "80:80"
