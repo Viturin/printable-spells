@@ -33,7 +33,7 @@ mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run generate:clien
 
 ## What This Tool Does
 
-- Fetches PF2e spell JSON data from Foundry and stores generated resources in `spellcards-app/src/generated/resources/foundry/`.
+- Fetches PF2e spell data from Foundry release asset `json-assets.zip` (`packs/spells.json`) and stores generated resources in `spellcards-app/src/generated/resources/foundry/`.
 - Loads and parses spells in the backend.
 - Exposes fuzzy search via REST: `GET /api/v1/spells/search`.
 - Provides a frontend for live spell search and card-oriented output.
