@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,6 +31,11 @@ public class FoundryJsonSpellRepository implements SpellRepository {
             return Optional.empty();
         }
         return Optional.ofNullable(spellsByLowerName.get(name.toLowerCase()));
+    }
+
+    @Override
+    public List<Spell> findAll() {
+        return List.copyOf(spellsByLowerName.values());
     }
 
     private void loadIndexFromResources() {
