@@ -3,6 +3,7 @@
 ## IntelliJ
 
 Shared run configurations are in `.run/`:
+- `init-setup` (bootstrap data + generated clients)
 - `spellcards-app` (Spring Boot backend)
 - `spellcards-web-dev` (Vite dev server)
 - `fullstack-dev` (starts both)
