@@ -50,7 +50,7 @@ What the script does:
 
 ```bash
 mvn compile
-mvn -pl spellcards-app spring-boot:run
+mvn -pl spellcards-app -am spring-boot:run
 ```
 
 Frontend (from `spellcards-web`):

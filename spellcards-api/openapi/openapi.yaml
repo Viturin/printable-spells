@@ -134,6 +134,9 @@ components:
         target:
           type: string
           example: 1 creature
+        description:
+          type: string
+          example: You cloud the target's mind and daze it with a mental jolt.
         score:
           type: number
           format: double
