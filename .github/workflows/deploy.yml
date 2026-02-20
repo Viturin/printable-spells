@@ -88,11 +88,14 @@ jobs:
 
   dispatch-production:
     name: Dispatch Production Deploy
-    needs: build-and-push
+    needs:
+      - build-and-push
+      - dispatch-staging
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'workflow_dispatch' &&
-      (inputs.deploy_target == 'production' || inputs.deploy_target == 'both')
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.deploy_target == 'production' || inputs.deploy_target == 'both'))
     environment:
       name: production
     steps:
