@@ -1,14 +1,15 @@
 package io.github.viturin.spellcards.adapters.out.foundry;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.domain.port.SpellRepository;
 import org.springframework.stereotype.Repository;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,13 +17,14 @@ import java.util.Optional;
 
 @Repository
 public class FoundryJsonSpellRepository implements SpellRepository {
-    private static final String INDEX_PATH = "foundry/spells/index.txt";
+    private static final String SPELLS_PATH = "foundry/spells/spells.json";
 
     private final Map<String, Spell> spellsByLowerName = new HashMap<>();
     private final FoundrySpellJsonParser parser = new FoundrySpellJsonParser();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public FoundryJsonSpellRepository() {
-        loadIndexFromResources();
+        loadSpellsFromResources();
     }
 
     @Override
@@ -38,46 +40,48 @@ public class FoundryJsonSpellRepository implements SpellRepository {
         return List.copyOf(spellsByLowerName.values());
     }
 
-    private void loadIndexFromResources() {
-        try (InputStream input = getRequiredResource(INDEX_PATH);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-            String resourceName;
-            while ((resourceName = reader.readLine()) != null) {
-                String trimmed = resourceName.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                    continue;
-                }
-                loadSpellResource("foundry/spells/" + trimmed);
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException("Unable to load spell index: " + INDEX_PATH, e);
-        }
-    }
-
-    private void loadSpellResource(String path) throws IOException {
-        try (InputStream input = getRequiredResource(path)) {
+    private void loadSpellsFromResources() {
+        try (InputStream input = getRequiredResource()) {
             String content = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            JsonNode root = objectMapper.readTree(content);
 
-            // Some sources are one object per file, others are NDJSON lines.
-            String[] candidates = content.lines().anyMatch(line -> line.trim().startsWith("{"))
-                    ? content.split("\\R")
-                    : new String[]{content};
-
-            for (String candidate : candidates) {
-                parser.parseSpell(candidate, path)
+            for (JsonNode document : extractDocuments(root)) {
+                parser.parseSpell(document.toString(), SPELLS_PATH)
                         .ifPresent(spell -> spellsByLowerName.putIfAbsent(spell.name().toLowerCase(), spell));
             }
-
-            parser.parseSpell(content, path)
-                    .ifPresent(spell -> spellsByLowerName.putIfAbsent(spell.name().toLowerCase(), spell));
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to load spells from: " + SPELLS_PATH, e);
         }
     }
 
-    private InputStream getRequiredResource(String path) {
-        InputStream resource = Thread.currentThread().getContextClassLoader().getResourceAsStream(path);
+    private InputStream getRequiredResource() {
+        InputStream resource = Thread.currentThread().getContextClassLoader().getResourceAsStream(FoundryJsonSpellRepository.SPELLS_PATH);
         if (resource == null) {
-            throw new IllegalStateException("Missing resource on classpath: " + path);
+            throw new IllegalStateException("Missing resource on classpath: " + FoundryJsonSpellRepository.SPELLS_PATH);
         }
         return resource;
+    }
+
+    private List<JsonNode> extractDocuments(JsonNode root) {
+        List<JsonNode> documents = new ArrayList<>();
+        if (root == null) {
+            return documents;
+        }
+        if (root.isArray()) {
+            root.forEach(documents::add);
+            return documents;
+        }
+        if (root.path("documents").isArray()) {
+            root.path("documents").forEach(documents::add);
+            return documents;
+        }
+        if (root.path("items").isArray()) {
+            root.path("items").forEach(documents::add);
+            return documents;
+        }
+        if (root.path("entries").isArray()) {
+            root.path("entries").forEach(documents::add);
+        }
+        return documents;
     }
 }

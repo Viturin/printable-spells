@@ -1,0 +1,56 @@
+[
+  {
+    "_id": "spell-1",
+    "name": "Daze",
+    "type": "spell",
+    "system": {
+      "level": { "value": 1 },
+      "description": { "value": "<p>Daze description.</p>" },
+      "time": { "value": "2" },
+      "range": { "value": "60 feet" },
+      "target": { "value": "1 creature" },
+      "duration": { "value": "", "sustained": false },
+      "traits": {
+        "rarity": "common",
+        "traditions": ["arcane"],
+        "value": ["cantrip", "mental"]
+      }
+    }
+  },
+  {
+    "_id": "focus-1",
+    "name": "Extend Spell",
+    "type": "spell",
+    "system": {
+      "level": { "value": 3 },
+      "description": { "value": "<p>Extend Spell description.</p>" },
+      "time": { "value": "1" },
+      "range": { "value": "" },
+      "target": { "value": "" },
+      "duration": { "value": "", "sustained": false },
+      "traits": {
+        "rarity": "uncommon",
+        "traditions": [],
+        "value": ["focus", "spellshape"]
+      }
+    }
+  },
+  {
+    "_id": "ritual-1",
+    "name": "Sample Ritual",
+    "type": "spell",
+    "system": {
+      "level": { "value": 4 },
+      "description": { "value": "<p>Ritual description.</p>" },
+      "time": { "value": "1 day" },
+      "range": { "value": "" },
+      "target": { "value": "" },
+      "duration": { "value": "", "sustained": false },
+      "traits": {
+        "rarity": "rare",
+        "traditions": [],
+        "value": ["ritual"]
+      }
+    }
+  }
+]

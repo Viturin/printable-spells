@@ -52,7 +52,7 @@ public class FoundrySpellJsonParser {
                     .name(name)
                     .level(level)
                     .description(description)
-                    .kind(inferKind(sourcePath))
+                    .kind(inferKind(system, sourcePath))
                     .actionCost(actionCost)
                     .range(range)
                     .target(target)
@@ -67,7 +67,23 @@ public class FoundrySpellJsonParser {
         }
     }
 
-    private SpellKind inferKind(String sourcePath) {
+    private SpellKind inferKind(JsonNode system, String sourcePath) {
+        String category = system.path("category").path("value").asText(system.path("category").asText(""));
+        if ("focus".equalsIgnoreCase(category)) {
+            return SpellKind.FOCUS;
+        }
+        if ("ritual".equalsIgnoreCase(category)) {
+            return SpellKind.RITUAL;
+        }
+
+        List<String> traits = readStringList(system.path("traits").path("value"));
+        if (traits.stream().anyMatch("focus"::equalsIgnoreCase)) {
+            return SpellKind.FOCUS;
+        }
+        if (traits.stream().anyMatch("ritual"::equalsIgnoreCase)) {
+            return SpellKind.RITUAL;
+        }
+
         if (sourcePath == null) {
             return SpellKind.SPELL;
         }

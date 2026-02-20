@@ -1,3 +1,0 @@
-spells__daze.json
-focus__extend-spell.json
-rituals__sample-ritual.json

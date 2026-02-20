@@ -1,66 +1,98 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-v13-dev}"
+VERSION_INPUT="${1:-latest}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST_DIR="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/spells"
 VERSION_FILE="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/version.txt"
 CACHE_DIR="$ROOT_DIR/.cache/foundry"
-REPO_DIR="$CACHE_DIR/pf2e-$VERSION"
-CACHE_TTL_DAYS="${CACHE_TTL_DAYS:-7}"
+RELEASE_CACHE_DIR="$CACHE_DIR/releases"
 
 cleanup() {
   :
 }
 trap cleanup EXIT
 
-is_cache_fresh() {
-  [[ -d "$REPO_DIR/.git" ]] && find "$REPO_DIR" -maxdepth 0 -mtime "-$CACHE_TTL_DAYS" | grep -q .
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing required command: $1"
+    exit 1
+  fi
 }
 
-echo "Using Foundry PF2e version: $VERSION"
-mkdir -p "$CACHE_DIR"
-if is_cache_fresh; then
-  echo "Using cached Foundry repo at $REPO_DIR (fresh < $CACHE_TTL_DAYS days)."
-else
-  echo "Refreshing Foundry repo cache at $REPO_DIR"
-  rm -rf "$REPO_DIR"
-  git clone --depth 1 --branch "$VERSION" https://github.com/foundryvtt/pf2e.git "$REPO_DIR"
-fi
-
-rm -f "$DEST_DIR"/*.json "$DEST_DIR"/index.txt
-mkdir -p "$DEST_DIR"
-
-SOURCE_BASE="$REPO_DIR/packs/pf2e/spells"
-SPELL_KINDS=("spells" "focus" "rituals")
-
-count=0
-for kind in "${SPELL_KINDS[@]}"; do
-  kind_dir="$SOURCE_BASE/$kind"
-  if [[ ! -d "$kind_dir" ]]; then
-    echo "Missing expected directory: $kind_dir"
-    continue
+resolve_version() {
+  if [[ "$VERSION_INPUT" != "latest" ]]; then
+    echo "$VERSION_INPUT"
+    return
   fi
 
-  while IFS= read -r -d '' file; do
-    rel_path="${file#"$kind_dir"/}"
-    safe_name="${kind}__$(echo "$rel_path" | tr '/' '__')"
-    cp "$file" "$DEST_DIR/$safe_name"
-    count=$((count + 1))
-  done < <(find "$kind_dir" -type f -name '*.json' ! -name '_folders.json' -print0)
-done
+  local latest_json
+  latest_json="$(curl -fsSL https://api.github.com/repos/foundryvtt/pf2e/releases/latest)"
+  local latest_tag
+  latest_tag="$(printf '%s\n' "$latest_json" | sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  if [[ -z "$latest_tag" ]]; then
+    echo "Unable to resolve latest release tag from GitHub API response."
+    exit 1
+  fi
+  echo "$latest_tag"
+}
 
-if [[ "$count" -eq 0 ]]; then
-  echo "No spell JSON files found under $SOURCE_BASE/{spells,focus,rituals}."
+extract_spells_json() {
+  local zip_file="$1"
+  local output_file="$2"
+
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -p "$zip_file" packs/spells.json > "$output_file"
+    return
+  fi
+
+  if command -v jar >/dev/null 2>&1; then
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    (
+      cd "$tmp_dir"
+      jar xf "$zip_file" packs/spells.json
+      cp packs/spells.json "$output_file"
+    )
+    rm -rf "$tmp_dir"
+    return
+  fi
+
+  echo "Missing required archive extractor. Install 'unzip' or make 'jar' available."
+  exit 1
+}
+
+require_cmd curl
+VERSION="$(resolve_version)"
+VERSION_CACHE_DIR="$RELEASE_CACHE_DIR/$VERSION"
+ZIP_FILE="$VERSION_CACHE_DIR/json-assets.zip"
+SPELLS_JSON="$VERSION_CACHE_DIR/spells.json"
+DEST_FILE="$DEST_DIR/spells.json"
+ASSET_URL="https://github.com/foundryvtt/pf2e/releases/download/$VERSION/json-assets.zip"
+
+echo "Using Foundry PF2e release: $VERSION"
+mkdir -p "$VERSION_CACHE_DIR"
+
+if [[ -f "$ZIP_FILE" ]]; then
+  echo "Using cached release asset at $ZIP_FILE"
+else
+  echo "Downloading $ASSET_URL"
+  curl -fL "$ASSET_URL" -o "$ZIP_FILE"
+fi
+
+extract_spells_json "$ZIP_FILE" "$SPELLS_JSON"
+
+rm -f "$DEST_DIR"/*.json "$DEST_DIR"/index.txt 2>/dev/null || true
+mkdir -p "$DEST_DIR"
+
+cp "$SPELLS_JSON" "$DEST_FILE"
+
+if [[ ! -s "$DEST_FILE" ]]; then
+  echo "Generated spells file is empty: $DEST_FILE"
   exit 1
 fi
 
-(
-  cd "$DEST_DIR"
-  ls -1 *.json | sort > index.txt
-)
-
 echo "$VERSION" > "$VERSION_FILE"
 
-echo "Copied $count spell/focus/ritual JSON files to $DEST_DIR"
+echo "Copied packs/spells.json to $DEST_FILE"
 echo "Updated $VERSION_FILE"

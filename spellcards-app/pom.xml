@@ -91,7 +91,7 @@
         <profile>
             <id>fetch-foundry-data</id>
             <properties>
-                <foundry.version>v13-dev</foundry.version>
+                <foundry.version>latest</foundry.version>
                 <it.includedTags>generated-data</it.includedTags>
             </properties>
             <build>
@@ -105,8 +105,7 @@
                                 <fileset>
                                     <directory>${project.basedir}/src/generated/resources/foundry/spells</directory>
                                     <includes>
-                                        <include>*.json</include>
-                                        <include>index.txt</include>
+                                        <include>spells.json</include>
                                     </includes>
                                 </fileset>
                                 <fileset>
