@@ -2,9 +2,13 @@
 /target/
 /spellcards-api/target/
 /spellcards-app/target/
+/spellcards-web/target/
 /build/
 /out/
 /spellcards-app/src/generated/resources/
+/spellcards-web/node_modules/
+/spellcards-web/dist/
+/spellcards-web/src/generated/client/
 
 # Local tool caches
 /.m2/

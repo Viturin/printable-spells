@@ -24,5 +24,6 @@
     <modules>
         <module>spellcards-api</module>
         <module>spellcards-app</module>
+        <module>spellcards-web</module>
     </modules>
 </project>
