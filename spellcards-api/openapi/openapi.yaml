@@ -123,10 +123,10 @@ components:
             type: string
           example:
             - cantrip
-            - mental
+            - rank-1
         actionCost:
           type: string
-          description: Foundry action value (for example, 1, 2, reaction, 1 day).
+          description: example, 1, 2, reaction, 1 day.
           example: '2'
         range:
           type: string

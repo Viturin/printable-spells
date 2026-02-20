@@ -62,7 +62,7 @@
                             <goal>generate</goal>
                         </goals>
                         <configuration>
-                            <inputSpec>${project.basedir}/openapi/spell-search.yaml</inputSpec>
+                            <inputSpec>${project.basedir}/openapi/openapi.yaml</inputSpec>
                             <generatorName>spring</generatorName>
                             <output>${project.build.directory}/generated-sources/openapi-server</output>
                             <apiPackage>io.github.viturin.spellcards.generated.api</apiPackage>
@@ -103,7 +103,7 @@
                                     <goal>generate</goal>
                                 </goals>
                                 <configuration>
-                                    <inputSpec>${project.basedir}/openapi/spell-search.yaml</inputSpec>
+                                    <inputSpec>${project.basedir}/openapi/openapi.yaml</inputSpec>
                                     <generatorName>java</generatorName>
                                     <output>${project.build.directory}/generated-sources/openapi-client</output>
                                     <apiPackage>io.github.viturin.spellcards.client.api</apiPackage>

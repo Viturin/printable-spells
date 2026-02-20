@@ -7,6 +7,8 @@ Backend prototype for loading PF2e spells from Foundry data and exposing parsed 
 - `spellcards-api`: OpenAPI spec + generated API contract artifact.
 - `spellcards-app`: Spring Boot application implementation.
 
+OpenAPI spec location: `spellcards-api/openapi/openapi.yaml`.
+
 ## Tech
 
 - Java 25
