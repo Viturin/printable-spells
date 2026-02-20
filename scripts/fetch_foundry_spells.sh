@@ -3,8 +3,8 @@ set -euo pipefail
 
 VERSION="${1:-v13-dev}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST_DIR="$ROOT_DIR/src/generated/resources/foundry/spells"
-VERSION_FILE="$ROOT_DIR/src/generated/resources/foundry/version.txt"
+DEST_DIR="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/spells"
+VERSION_FILE="$ROOT_DIR/spellcards-app/src/generated/resources/foundry/version.txt"
 CACHE_DIR="$ROOT_DIR/.cache/foundry"
 REPO_DIR="$CACHE_DIR/pf2e-$VERSION"
 CACHE_TTL_DAYS="${CACHE_TTL_DAYS:-7}"

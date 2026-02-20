@@ -1,0 +1,177 @@
+openapi: 3.0.3
+info:
+  title: Printable Spells API
+  version: 0.1.0
+  description: API contract for fuzzy searching PF2e spells.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /api/v1/spells/search:
+    get:
+      tags:
+        - Spells
+      operationId: searchSpells
+      summary: Fuzzy search spells
+      description: >-
+        Returns spell summaries ranked by fuzzy match score for the provided query.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search text.
+          schema:
+            type: string
+            minLength: 1
+            example: daze
+        - name: kind
+          in: query
+          required: false
+          description: Optional spell kind filter.
+          schema:
+            $ref: '#/components/schemas/SpellKind'
+        - name: limit
+          in: query
+          required: false
+          description: Max number of results to return.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor from a previous response.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Spell search results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpellSearchResponse'
+        '400':
+          description: Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Spells
+    description: Spell search operations
+
+components:
+  schemas:
+    SpellKind:
+      type: string
+      enum:
+        - SPELL
+        - FOCUS
+        - RITUAL
+
+    SpellRarity:
+      type: string
+      enum:
+        - common
+        - uncommon
+        - rare
+        - unique
+
+    SpellSummary:
+      type: object
+      required:
+        - id
+        - name
+        - level
+        - kind
+        - rarity
+        - traditions
+        - traits
+        - score
+      properties:
+        id:
+          type: string
+          example: r3NeUnsgt9mS03Sn
+        name:
+          type: string
+          example: Daze
+        level:
+          type: integer
+          format: int32
+          minimum: 0
+          example: 1
+        kind:
+          $ref: '#/components/schemas/SpellKind'
+        rarity:
+          $ref: '#/components/schemas/SpellRarity'
+        traditions:
+          type: array
+          items:
+            type: string
+          example:
+            - arcane
+            - occult
+        traits:
+          type: array
+          items:
+            type: string
+          example:
+            - cantrip
+            - rank-1
+        actionCost:
+          type: string
+          description: example, 1, 2, reaction, 1 day.
+          example: '2'
+        range:
+          type: string
+          example: 60 feet
+        target:
+          type: string
+          example: 1 creature
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Normalized fuzzy match score.
+          example: 0.97
+
+    SpellSearchResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpellSummary'
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, null when no more results.
+          example: eyJvZmZzZXQiOjIwfQ==
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: INVALID_ARGUMENT
+        message:
+          type: string
+          example: query parameter 'q' must not be blank
+        details:
+          type: array
+          items:
+            type: string
+          example:
+            - q must have at least 1 character
