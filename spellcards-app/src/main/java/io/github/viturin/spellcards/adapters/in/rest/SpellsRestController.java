@@ -49,6 +49,7 @@ public class SpellsRestController implements SpellsApi {
         summary.setActionCost(item.spell().actionCost());
         summary.setRange(item.spell().range());
         summary.setTarget(item.spell().target());
+        summary.setDescription(item.spell().description());
         return summary;
     }
 
