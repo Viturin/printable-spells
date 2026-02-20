@@ -1,6 +1,6 @@
 package io.github.viturin.spellcards.application.service;
 
-import io.github.viturin.spellcards.application.port.in.GenerateSpellCardsUseCase;
+import io.github.viturin.spellcards.application.port.in.SpellCardGenerationService;
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.domain.port.SpellRepository;
 import org.slf4j.Logger;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class GenerateSpellCardsService implements GenerateSpellCardsUseCase {
+public class GenerateSpellCardsService implements SpellCardGenerationService {
     private static final Logger LOG = LoggerFactory.getLogger(GenerateSpellCardsService.class);
 
     private final SpellRepository spellCatalog;

@@ -9,7 +9,7 @@ import java.util.List;
 public class CommandLineSpellRequestAdapter {
     public List<String> parseSpellNames(String[] args) {
         if (args == null || args.length == 0) {
-            return List.of("Daze");
+            return List.of();
         }
         return Arrays.stream(args)
                 .map(String::trim)
