@@ -1,18 +1,16 @@
 services:
   spellcards-app:
+    image: spellcards-app:local
     build:
       context: .
       dockerfile: spellcards-app/Dockerfile
-    container_name: spellcards-app
     restart: unless-stopped
 
   spellcards-web:
+    image: spellcards-web:local
     build:
       context: .
       dockerfile: spellcards-web/Dockerfile
-    container_name: spellcards-web
     depends_on:
       - spellcards-app
-    ports:
-      - "80:80"
     restart: unless-stopped
