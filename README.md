@@ -2,6 +2,11 @@
 
 Backend prototype for loading PF2e spells from Foundry data and exposing parsed spell domain objects.
 
+## Modules
+
+- `spellcards-api`: OpenAPI spec + generated API contract artifact.
+- `spellcards-app`: Spring Boot application implementation.
+
 ## Tech
 
 - Java 25
@@ -31,15 +36,15 @@ What the script does:
    - `packs/pf2e/spells/rituals`
    (excluding `_folders.json`).
 3. Writes generated resources to:
-   - `src/generated/resources/foundry/spells/*.json`
-   - `src/generated/resources/foundry/spells/index.txt`
-   - `src/generated/resources/foundry/version.txt`
+   - `spellcards-app/src/generated/resources/foundry/spells/*.json`
+   - `spellcards-app/src/generated/resources/foundry/spells/index.txt`
+   - `spellcards-app/src/generated/resources/foundry/version.txt`
 
 ## Build / run
 
 ```bash
 mvn compile
-mvn spring-boot:run -Dspring-boot.run.arguments="Daze"
+mvn -pl spellcards-app spring-boot:run -Dspring-boot.run.arguments="Daze"
 ```
 
 ## Tests
@@ -51,7 +56,7 @@ mvn test
 Important test coverage:
 - Parser unit tests for valid/invalid payloads and kind inference.
 - Repository tests for lookup behavior.
-- Generated data parse test that iterates all files in `src/generated/resources/foundry/spells/index.txt` as parameterized tests (isolated per file).
+- Generated data parse IT that iterates all files in `spellcards-app/src/generated/resources/foundry/spells/index.txt` as parameterized tests (isolated per file).
 
 ## Package layout
 

@@ -1,8 +1,10 @@
 # Build outputs
 /target/
+/spellcards-api/target/
+/spellcards-app/target/
 /build/
 /out/
-/src/generated/resources/
+/spellcards-app/src/generated/resources/
 
 # Local tool caches
 /.m2/
