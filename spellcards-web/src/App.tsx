@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 
 type SpellSummary = {
   id: string;
@@ -26,10 +26,47 @@ type ApiErrorResponse = {
   details?: string[];
 };
 
+type SpellListProps = {
+  spells: SpellSummary[];
+  onSpellClick: (spell: SpellSummary) => void;
+  onSpellKeyDown: (event: KeyboardEvent<HTMLElement>, action: () => void) => void;
+  ariaLabelPrefix: string;
+};
+
+function SpellList({ spells, onSpellClick, onSpellKeyDown, ariaLabelPrefix }: SpellListProps) {
+  return (
+    <ul className="results">
+      {spells.map((spell) => (
+        <li
+          key={spell.id}
+          className="resultItem resultItemClickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => onSpellClick(spell)}
+          onKeyDown={(event) => onSpellKeyDown(event, () => onSpellClick(spell))}
+          aria-label={`${ariaLabelPrefix} ${spell.name}`}
+        >
+          <div className="resultHeader">
+            <strong>{spell.name}</strong>
+            <span>
+              L{spell.level} • {spell.kind.toLowerCase()} • {spell.rarity}
+            </span>
+          </div>
+          <div className="resultMeta">
+            {spell.traditions.length > 0 ? spell.traditions.join(", ") : "no traditions"}
+          </div>
+          {spell.description ? <p className="resultDescription">{spell.description}</p> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function App() {
   const [query, setQuery] = useState("daze");
   const [items, setItems] = useState<SpellSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
+  const [, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,46 +152,70 @@ export function App() {
     return `Search failed (${status}).`;
   }
 
+  function isSelected(spellId: string): boolean {
+    return selectedSpells.some((spell) => spell.id === spellId);
+  }
+
+  function addSpell(spell: SpellSummary) {
+    setSelectedSpells((current) => {
+      if (current.some((item) => item.id === spell.id)) {
+        return current;
+      }
+      return [...current, spell];
+    });
+  }
+
+  function removeSpell(spellId: string) {
+    setSelectedSpells((current) => current.filter((spell) => spell.id !== spellId));
+  }
+
+  function onSpellKeyDown(event: KeyboardEvent<HTMLElement>, action: () => void) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  }
+
+  const searchableItems = items.filter((spell) => !isSelected(spell.id));
+
   return (
     <main className="page">
-      <section className="card cardFixed">
-        <h1>Printable Spells</h1>
-        <p>Search spells from the backend REST API.</p>
+      <div className="columns">
+        <section className="card cardFixed">
+          <h2>Find Spells</h2>
 
-        <form className="searchForm">
-          <label htmlFor="spell-query">Search Query</label>
-          <input
-            id="spell-query"
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search spells"
+          <form className="searchForm">
+            <input
+              id="spell-query"
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search spells"
+            />
+          </form>
+
+          {error ? <p className="error">{error}</p> : null}
+
+          <SpellList
+            spells={searchableItems}
+            onSpellClick={addSpell}
+            onSpellKeyDown={onSpellKeyDown}
+            ariaLabelPrefix="Move to selected spells:"
           />
+        </section>
 
-          <button type="button" disabled>
-            {isLoading ? "Searching..." : "Type to search"}
-          </button>
-        </form>
+        <section className="card cardFixed">
+          <h2>Selected Spells</h2>
+          <p>{selectedSpells.length} spell(s) selected.</p>
 
-        {error ? <p className="error">{error}</p> : null}
-
-        <ul className="results">
-          {items.map((spell) => (
-            <li key={spell.id} className="resultItem">
-              <div className="resultHeader">
-                <strong>{spell.name}</strong>
-                <span>
-                  L{spell.level} • {spell.kind.toLowerCase()} • {spell.rarity}
-                </span>
-              </div>
-              <div className="resultMeta">
-                {spell.traditions.length > 0 ? spell.traditions.join(", ") : "no traditions"}
-              </div>
-              {spell.description ? <p className="resultDescription">{spell.description}</p> : null}
-            </li>
-          ))}
-        </ul>
-      </section>
+          <SpellList
+            spells={selectedSpells}
+            onSpellClick={(spell) => removeSpell(spell.id)}
+            onSpellKeyDown={onSpellKeyDown}
+            ariaLabelPrefix="Move back to search results:"
+          />
+        </section>
+      </div>
     </main>
   );
 }
