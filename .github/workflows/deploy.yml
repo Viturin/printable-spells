@@ -14,6 +14,10 @@ on:
           - production
           - both
         default: staging
+      rollback_tag:
+        description: "Optional existing image tag to deploy (for rollback), e.g. sha-abc123def456"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,20 +28,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-push:
-    name: Build and Push Images
+  resolve-image:
+    name: Resolve Image Tag
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.vars.outputs.image_tag }}
-      ghcr_owner: ${{ steps.vars.outputs.ghcr_owner }}
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+      ghcr_owner: ${{ steps.resolve.outputs.ghcr_owner }}
+      should_build: ${{ steps.resolve.outputs.should_build }}
     steps:
-      - uses: actions/checkout@v5
-      - id: vars
+      - id: resolve
         shell: bash
         run: |
           set -euo pipefail
-          echo "image_tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
           echo "ghcr_owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          rollback_tag="${{ inputs.rollback_tag }}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${rollback_tag}" ]]; then
+            echo "image_tag=${rollback_tag}" >> "$GITHUB_OUTPUT"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-push:
+    name: Build and Push Images
+    needs: resolve-image
+    if: ${{ needs.resolve-image.outputs.should_build == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
 
       - uses: docker/login-action@v3
         with:
@@ -52,8 +71,8 @@ jobs:
           file: ./spellcards-app/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.vars.outputs.ghcr_owner }}/spellcards-app:${{ steps.vars.outputs.image_tag }}
-            ghcr.io/${{ steps.vars.outputs.ghcr_owner }}/spellcards-app:latest
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-app:${{ needs.resolve-image.outputs.image_tag }}
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-app:latest
 
       - name: Build and push web image
         uses: docker/build-push-action@v6
@@ -62,17 +81,23 @@ jobs:
           file: ./spellcards-web/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.vars.outputs.ghcr_owner }}/spellcards-web:${{ steps.vars.outputs.image_tag }}
-            ghcr.io/${{ steps.vars.outputs.ghcr_owner }}/spellcards-web:latest
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-web:${{ needs.resolve-image.outputs.image_tag }}
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-web:latest
 
   dispatch-staging:
     name: Dispatch Staging Deploy
-    needs: build-and-push
+    needs:
+      - resolve-image
+      - build-and-push
     runs-on: ubuntu-latest
     if: >
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
       github.event_name == 'push' ||
+      (
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
       (github.event_name == 'workflow_dispatch' &&
       (inputs.deploy_target == 'staging' || inputs.deploy_target == 'both'))
+      )
     steps:
       - uses: peter-evans/repository-dispatch@v3
         with:
@@ -83,19 +108,33 @@ jobs:
             {
               "stack": "spellcards",
               "environment": "staging",
-              "env_lines": "APP_IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}"
+              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
             }
 
   dispatch-production:
     name: Dispatch Production Deploy
     needs:
+      - resolve-image
       - build-and-push
       - dispatch-staging
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.deploy_target == 'production' || inputs.deploy_target == 'both'))
+      (
+      github.event_name == 'push' &&
+      needs.dispatch-staging.result == 'success' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+      ) ||
+      (
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_target == 'both' &&
+      needs.dispatch-staging.result == 'success' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+      ) ||
+      (
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy_target == 'production' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+      )
     environment:
       name: production
     steps:
@@ -108,5 +147,5 @@ jobs:
             {
               "stack": "spellcards",
               "environment": "production",
-              "env_lines": "APP_IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}"
+              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
             }
