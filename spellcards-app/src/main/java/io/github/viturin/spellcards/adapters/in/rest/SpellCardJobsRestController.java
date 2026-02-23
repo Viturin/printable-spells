@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 public class SpellCardJobsRestController implements SpellCardJobsApi {
     private final SpellCardJobSubmissionService spellCardJobSubmissionService;
@@ -19,7 +21,7 @@ public class SpellCardJobsRestController implements SpellCardJobsApi {
 
     @Override
     public ResponseEntity<CreateSpellCardJobResponse> createSpellCardJob(CreateSpellCardJobRequest createSpellCardJobRequest) {
-        String jobId = spellCardJobSubmissionService.submit(createSpellCardJobRequest.getSpellNames());
+        UUID jobId = spellCardJobSubmissionService.submit(createSpellCardJobRequest.getSpellNames());
         CreateSpellCardJobResponse response = new CreateSpellCardJobResponse(
                 jobId,
                 SpellCardJobStatus.QUEUED

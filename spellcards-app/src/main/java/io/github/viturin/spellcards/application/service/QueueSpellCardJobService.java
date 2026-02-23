@@ -17,7 +17,7 @@ public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
     }
 
     @Override
-    public String submit(List<String> spellNames) {
+    public UUID submit(List<String> spellNames) {
         List<String> normalizedSpellNames = spellNames == null
                 ? List.of()
                 : spellNames.stream()
@@ -30,7 +30,7 @@ public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
             throw new IllegalArgumentException("At least one spell name must be provided");
         }
 
-        String jobId = UUID.randomUUID().toString();
+        UUID jobId = UUID.randomUUID();
         jobPublisher.publish(new SpellCardJobMessage(jobId, normalizedSpellNames));
         return jobId;
     }
