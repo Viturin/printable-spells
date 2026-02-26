@@ -2,6 +2,13 @@
   <configuration default="false" name="spellcards-app" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="spellcards-app" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="io.github.viturin.spellcards.SpellCardsApplication" />
+    <envs>
+      <env name="RABBITMQ_HOST" value="localhost" />
+      <env name="RABBITMQ_PORT" value="5672" />
+      <env name="RABBITMQ_USERNAME" value="spellcards" />
+      <env name="RABBITMQ_PASSWORD" value="spellcards" />
+      <env name="SPELLCARDS_QUEUE_NAME" value="spellcards.pdf.jobs" />
+    </envs>
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
       <option name="IS_SUBST" value="false" />

@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="spellcards-worker" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="spellcards-worker" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="io.github.viturin.spellcards.worker.SpellCardsWorkerApplication" />
+    <envs>
+      <env name="RABBITMQ_HOST" value="localhost" />
+      <env name="RABBITMQ_PORT" value="5672" />
+      <env name="RABBITMQ_USERNAME" value="spellcards" />
+      <env name="RABBITMQ_PASSWORD" value="spellcards" />
+      <env name="SPELLCARDS_QUEUE_NAME" value="spellcards.pdf.jobs" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

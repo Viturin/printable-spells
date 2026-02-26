@@ -1,7 +1,7 @@
 package io.github.viturin.spellcards.adapters.out.queue;
 
-import io.github.viturin.spellcards.application.model.SpellCardJobMessage;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
+import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

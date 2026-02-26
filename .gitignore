@@ -1,8 +1,6 @@
 # Build outputs
 /target/
-/spellcards-api/target/
-/spellcards-app/target/
-/spellcards-web/target/
+**/target/
 /build/
 /out/
 /spellcards-app/src/generated/resources/
