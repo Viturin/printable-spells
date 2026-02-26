@@ -1,4 +1,4 @@
-package io.github.viturin.spellcards.application.model;
+package io.github.viturin.spellcards.queue.model;
 
 import java.util.List;
 import java.util.UUID;

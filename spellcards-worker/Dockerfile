@@ -11,14 +11,13 @@ COPY scripts scripts
 COPY spellcards-api spellcards-api
 COPY spellcards-queue spellcards-queue
 COPY spellcards-app spellcards-app
+COPY spellcards-worker spellcards-worker
 
-RUN mvn -B -pl spellcards-app -am -Pfetch-foundry-data -DskipTests package
+RUN mvn -B -pl spellcards-worker -am -Pfetch-foundry-data -DskipTests package
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 
-COPY --from=build /workspace/spellcards-app/target/spellcards-app-*.jar /app/spellcards-app.jar
+COPY --from=build /workspace/spellcards-worker/target/spellcards-worker-*.jar /app/spellcards-worker.jar
 
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "/app/spellcards-app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/spellcards-worker.jar"]

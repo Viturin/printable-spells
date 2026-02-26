@@ -1,14 +1,16 @@
 package io.github.viturin.spellcards.application.service;
 
-import io.github.viturin.spellcards.application.model.SpellCardJobMessage;
 import io.github.viturin.spellcards.application.port.in.SpellCardJobSubmissionService;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
+import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@ConditionalOnBean(SpellCardJobPublisher.class)
 public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
     private final SpellCardJobPublisher jobPublisher;
 

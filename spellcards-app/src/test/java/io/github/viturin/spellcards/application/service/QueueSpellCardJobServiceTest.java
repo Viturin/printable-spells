@@ -1,7 +1,7 @@
 package io.github.viturin.spellcards.application.service;
 
-import io.github.viturin.spellcards.application.model.SpellCardJobMessage;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
+import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
