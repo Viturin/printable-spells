@@ -17,7 +17,7 @@ RUN mvn -B -pl spellcards-app -am -Pfetch-foundry-data -DskipTests package
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 
-COPY --from=build /workspace/spellcards-app/target/spellcards-app-*.jar /app/spellcards-app.jar
+COPY --from=build /workspace/spellcards-app/target/spellcards-app-*-exec.jar /app/spellcards-app.jar
 
 EXPOSE 8080
 

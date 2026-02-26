@@ -90,6 +90,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
+                    <classifier>exec</classifier>
                 </configuration>
             </plugin>
         </plugins>
