@@ -65,7 +65,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push app image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./spellcards-app/Dockerfile
@@ -75,7 +75,7 @@ jobs:
             ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-app:latest
 
       - name: Build and push web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./spellcards-web/Dockerfile
