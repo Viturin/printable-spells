@@ -34,7 +34,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          latest="$(curl -fsSL https://api.github.com/repos/foundryvtt/pf2e/releases/latest | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          latest="$(
+            curl -fsSL "https://api.github.com/repos/foundryvtt/pf2e/releases?per_page=100" |
+            python3 -c '
+              import json
+              import sys
+              
+              for release in json.load(sys.stdin):
+                  tag = release.get("tag_name", "")
+                  if release.get("draft") or release.get("prerelease"):
+                      continue
+                  if tag.startswith("pf2e-"):
+                      print(tag)
+                      break
+              else:
+                  raise SystemExit("No PF2e release tag found.")
+              '
+                        )"
           current="$(sed -n 's:.*<foundry.version>\(.*\)</foundry.version>.*:\1:p' spellcards-app/pom.xml | head -n 1)"
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "current=$current" >> "$GITHUB_OUTPUT"

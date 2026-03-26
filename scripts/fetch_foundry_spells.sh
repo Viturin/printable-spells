@@ -29,11 +29,26 @@ resolve_version() {
   fi
 
   local latest_json
-  latest_json="$(curl -fsSL https://api.github.com/repos/foundryvtt/pf2e/releases/latest)"
+  latest_json="$(curl -fsSL "https://api.github.com/repos/foundryvtt/pf2e/releases?per_page=100")"
   local latest_tag
-  latest_tag="$(printf '%s\n' "$latest_json" | sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  latest_tag="$(
+    printf '%s\n' "$latest_json" | python3 -c '
+import json
+import sys
+
+for release in json.load(sys.stdin):
+    tag = release.get("tag_name", "")
+    if release.get("draft") or release.get("prerelease"):
+        continue
+    if tag.startswith("pf2e-"):
+        print(tag)
+        break
+else:
+    raise SystemExit("Unable to resolve latest PF2e release tag from GitHub API response.")
+'
+  )"
   if [[ -z "$latest_tag" ]]; then
-    echo "Unable to resolve latest release tag from GitHub API response."
+    echo "Unable to resolve latest PF2e release tag from GitHub API response."
     exit 1
   fi
   echo "$latest_tag"
