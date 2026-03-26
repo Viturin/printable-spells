@@ -84,6 +84,16 @@ jobs:
             ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-web:${{ needs.resolve-image.outputs.image_tag }}
             ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-web:latest
 
+      - name: Build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./spellcards-worker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-worker:${{ needs.resolve-image.outputs.image_tag }}
+            ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-worker:latest
+
   dispatch-staging:
     name: Dispatch Staging Deploy
     needs:
@@ -108,7 +118,7 @@ jobs:
             {
               "stack": "spellcards",
               "environment": "staging",
-              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
+              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWORKER_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
             }
 
   dispatch-production:
@@ -147,5 +157,5 @@ jobs:
             {
               "stack": "spellcards",
               "environment": "production",
-              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
+              "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWORKER_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
             }

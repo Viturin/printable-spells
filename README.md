@@ -10,11 +10,19 @@ Shared run configurations are in `.run/`:
 
 ## Maven
 
+Modules:
+- `spellcards-api`: OpenAPI contract + generated server interfaces/models
+- `spellcards-queue`: shared queue contracts/configuration
+- `spellcards-app`: REST API (search + job enqueue)
+- `spellcards-worker`: async queue consumer
+- `spellcards-web`: frontend
+
 Common commands:
 
 ```bash
 mvn compile
 mvn -pl spellcards-app -am spring-boot:run
+mvn -pl spellcards-worker -am spring-boot:run
 mvn -pl spellcards-web verify
 mvn test
 ```
@@ -33,7 +41,7 @@ mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run generate:clien
 
 ## Local Hosting (Docker Compose)
 
-Build and run backend + frontend:
+Build and run API + worker + RabbitMQ + frontend:
 
 ```bash
 docker compose up --build -d
@@ -41,6 +49,7 @@ docker compose up --build -d
 
 Open:
 - `http://localhost`
+- RabbitMQ UI: `http://localhost:15672`
 
 Optional local DNS name:
 1. Add `127.0.0.1 spellcards.local` to `/etc/hosts` (or your LAN DNS).
@@ -101,4 +110,7 @@ To require manual approval before prod:
 - Skips download when generated data already matches the pinned version; `mvn -Pfetch-foundry-data clean` forces a refresh.
 - Loads and parses spells in the backend.
 - Exposes fuzzy search via REST: `GET /api/v1/spells/search`.
+- Exposes async job enqueue endpoint: `POST /api/v1/spellcards/jobs`.
+- Publishes job messages to RabbitMQ queue `spellcards.pdf.jobs`.
+- Consumes queued jobs in `spellcards-worker`.
 - Provides a frontend for live spell search and card-oriented output.

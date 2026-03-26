@@ -4,6 +4,39 @@ services:
     build:
       context: .
       dockerfile: spellcards-app/Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: spellcards
+      RABBITMQ_PASSWORD: spellcards
+      SPELLCARDS_QUEUE_NAME: spellcards.pdf.jobs
+    restart: unless-stopped
+
+  spellcards-worker:
+    image: spellcards-worker:local
+    build:
+      context: .
+      dockerfile: spellcards-worker/Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: spellcards
+      RABBITMQ_PASSWORD: spellcards
+      SPELLCARDS_QUEUE_NAME: spellcards.pdf.jobs
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    environment:
+      RABBITMQ_DEFAULT_USER: spellcards
+      RABBITMQ_DEFAULT_PASS: spellcards
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     restart: unless-stopped
 
   spellcards-web:

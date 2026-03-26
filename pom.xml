@@ -23,7 +23,9 @@
 
     <modules>
         <module>spellcards-api</module>
+        <module>spellcards-queue</module>
         <module>spellcards-app</module>
+        <module>spellcards-worker</module>
         <module>spellcards-web</module>
     </modules>
 </project>
