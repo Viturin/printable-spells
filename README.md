@@ -41,10 +41,19 @@ mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run generate:clien
 
 ## Local Hosting (Docker Compose)
 
-Build and run API + worker + RabbitMQ + frontend:
+The shared `../dev-workspace` repository owns local RabbitMQ. Start it before running the application containers:
 
 ```bash
-docker compose up --build -d
+cd ../dev-workspace
+./bin/init-workspace
+./bin/services-up rabbitmq
+cd ../spell_cards_from_pf2
+```
+
+Build and run the API + worker + frontend:
+
+```bash
+docker compose --env-file ../dev-workspace/.env up --build -d
 ```
 
 Open:
@@ -58,8 +67,14 @@ Optional local DNS name:
 Stop:
 
 ```bash
-docker compose down
+docker compose --env-file ../dev-workspace/.env down
 ```
+
+## IntelliJ Local Development
+
+Use the centralized IntelliJ project in `../dev-workspace`. Run `../dev-workspace/bin/init-workspace` after changing the workspace manifest, then open the `dev-workspace` directory in IntelliJ and import its generated `pom.xml` as a Maven project.
+
+The generated run configurations include `spellcards-app`, `spellcards-worker`, `spellcards-web-dev`, `fullstack-dev`, and RabbitMQ lifecycle commands.
 
 ## Staging + Prod (Same Host)
 
