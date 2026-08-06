@@ -2,8 +2,8 @@
 
 ## IntelliJ
 
-Shared run configurations are in `.run/`:
-- `init-setup` (bootstrap data + generated clients)
+Shared run configurations are in the workspace root under `.idea/runConfigurations/`:
+- `bootstrap-spellcards` (bootstrap data + generated clients)
 - `spellcards-app` (Spring Boot backend)
 - `spellcards-web-dev` (Vite dev server)
 - `fullstack-dev` (starts both)
@@ -125,7 +125,7 @@ To require manual approval before prod:
 
 - Fetches PF2e spell data from Foundry release asset `json-assets.zip` (`packs/spells.json`) and stores generated resources in `spellcards-app/src/generated/resources/foundry/`.
 - Uses a pinned Foundry release tag from `spellcards-app/pom.xml` (`foundry.version`).
-- Skips download when generated data already matches the pinned version; `mvn -Pfetch-foundry-data clean` forces a refresh.
+- Skips download when generated data already matches the pinned version; `mvn -Pfetch-foundry-pf2e-spells clean` forces a refresh.
 - Loads and parses spells in the backend.
 - Exposes fuzzy search via REST: `GET /api/v1/spells/search`.
 - Exposes async job enqueue endpoint: `POST /api/v1/spellcards/jobs`.
