@@ -21,4 +21,4 @@ jobs:
           cache: maven
 
       - name: Run full test suite with Foundry data fetch
-        run: mvn -B -Pfetch-foundry-data verify
+        run: mvn -B -Pfetch-foundry-pf2e-spells verify
