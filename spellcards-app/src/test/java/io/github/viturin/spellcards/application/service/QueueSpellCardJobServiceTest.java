@@ -1,6 +1,7 @@
 package io.github.viturin.spellcards.application.service;
 
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
+import io.github.viturin.spellcards.application.port.out.SpellCardJobStore;
 import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -19,10 +20,12 @@ class QueueSpellCardJobServiceTest {
     @Test
     void returnsUuidAndPublishesNormalizedMessage() {
         SpellCardJobPublisher publisher = mock(SpellCardJobPublisher.class);
-        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher);
+        SpellCardJobStore jobStore = mock(SpellCardJobStore.class);
+        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher, jobStore);
 
         UUID jobId = service.submit(List.of(" Daze ", "Magic Missile", "Daze", "  "));
 
+        verify(jobStore).createQueued(jobId, List.of("Daze", "Magic Missile"));
         ArgumentCaptor<SpellCardJobMessage> messageCaptor = ArgumentCaptor.forClass(SpellCardJobMessage.class);
         verify(publisher).publish(messageCaptor.capture());
 
@@ -34,9 +37,11 @@ class QueueSpellCardJobServiceTest {
     @Test
     void throwsForEmptyPayloadAndDoesNotPublish() {
         SpellCardJobPublisher publisher = mock(SpellCardJobPublisher.class);
-        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher);
+        SpellCardJobStore jobStore = mock(SpellCardJobStore.class);
+        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher, jobStore);
 
         assertThrows(IllegalArgumentException.class, () -> service.submit(List.of("  ", "")));
+        verify(jobStore, never()).createQueued(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
         verify(publisher, never()).publish(org.mockito.ArgumentMatchers.any());
     }
 }
