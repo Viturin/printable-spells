@@ -13,7 +13,7 @@ COPY spellcards-queue spellcards-queue
 COPY spellcards-app spellcards-app
 COPY spellcards-worker spellcards-worker
 
-RUN mvn -B -pl spellcards-worker -am -Pfetch-foundry-data -DskipTests package
+RUN mvn -B -pl spellcards-worker -am -Pfetch-foundry-pf2e-spells -DskipTests package
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

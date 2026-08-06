@@ -98,7 +98,7 @@
 
     <profiles>
         <profile>
-            <id>fetch-foundry-data</id>
+            <id>fetch-foundry-pf2e-spells</id>
             <properties>
                 <foundry.version>pf2e-7.11.2</foundry.version>
                 <it.includedTags>generated-data</it.includedTags>
@@ -132,7 +132,7 @@
                         <version>3.6.3</version>
                         <executions>
                             <execution>
-                                <id>fetch-foundry-spells</id>
+                                <id>fetch-foundry-pf2e-spells</id>
                                 <phase>generate-resources</phase>
                                 <goals>
                                     <goal>exec</goal>
