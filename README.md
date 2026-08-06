@@ -59,6 +59,9 @@ Build and run the API + worker + frontend:
 docker compose --env-file ../dev-workspace/.env up --build -d
 ```
 
+Generated spellcard jobs use the shared `spellcards-artifacts` volume. Job manifests
+and generated files are retained for 24 hours before cleanup.
+
 Open:
 - `http://localhost`
 - RabbitMQ UI: `http://localhost:15672`

@@ -2,6 +2,7 @@ package io.github.viturin.spellcards.application.service;
 
 import io.github.viturin.spellcards.application.port.in.SpellCardJobSubmissionService;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
+import io.github.viturin.spellcards.application.port.out.SpellCardJobStore;
 import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
@@ -13,9 +14,11 @@ import java.util.UUID;
 @ConditionalOnBean(SpellCardJobPublisher.class)
 public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
     private final SpellCardJobPublisher jobPublisher;
+    private final SpellCardJobStore jobStore;
 
-    public QueueSpellCardJobService(SpellCardJobPublisher jobPublisher) {
+    public QueueSpellCardJobService(SpellCardJobPublisher jobPublisher, SpellCardJobStore jobStore) {
         this.jobPublisher = jobPublisher;
+        this.jobStore = jobStore;
     }
 
     @Override
@@ -33,7 +36,17 @@ public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
         }
 
         UUID jobId = UUID.randomUUID();
-        jobPublisher.publish(new SpellCardJobMessage(jobId, normalizedSpellNames));
+        jobStore.createQueued(jobId, normalizedSpellNames);
+        try {
+            jobPublisher.publish(new SpellCardJobMessage(jobId, normalizedSpellNames));
+        } catch (RuntimeException exception) {
+            try {
+                jobStore.markFailed(jobId, "Unable to queue spell card generation");
+            } catch (RuntimeException storeException) {
+                exception.addSuppressed(storeException);
+            }
+            throw exception;
+        }
         return jobId;
     }
 }
