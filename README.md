@@ -20,12 +20,15 @@ Modules:
 Common commands:
 
 ```bash
-mvn compile
+mvn -Psystem-node compile
 mvn -pl spellcards-app -am spring-boot:run
 mvn -pl spellcards-worker -am spring-boot:run
 mvn -pl spellcards-web verify
 mvn test
 ```
+
+The `system-node` profile uses the Node.js and npm binaries on `PATH` for local
+builds. CI can use the default Maven-managed Node installation.
 
 Frontend dev via Maven:
 
