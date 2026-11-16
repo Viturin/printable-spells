@@ -100,7 +100,7 @@
         <profile>
             <id>fetch-foundry-pf2e-spells</id>
             <properties>
-                <foundry.version>pf2e-7.11.2</foundry.version>
+                <foundry.version>pf2e-anachronism-2.5.0</foundry.version>
                 <it.includedTags>generated-data</it.includedTags>
             </properties>
             <build>
