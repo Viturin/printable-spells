@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
 import io.github.viturin.spellcards.domain.model.Spell;
+import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
 import io.github.viturin.spellcards.domain.model.SpellKind;
 
 import java.util.ArrayList;
@@ -56,6 +57,7 @@ public class FoundrySpellJsonParser {
                     .description(description)
                     .kind(inferKind(system, sourcePath))
                     .actionCost(actionCost)
+                    .castingDetails(readCastingDetails(system))
                     .range(range)
                     .target(target)
                     .duration(duration)
@@ -69,12 +71,62 @@ public class FoundrySpellJsonParser {
         }
     }
 
+    private SpellCastingDetails readCastingDetails(JsonNode system) {
+        var area = system.path("area");
+        var defense = system.path("defense");
+        var ritual = system.path("ritual");
+        return new SpellCastingDetails(
+                formatArea(area),
+                formatDefense(defense),
+                htmlToPlain(system.path("requirements").asText("")),
+                htmlToPlain(system.path("cost").path("value").asText("")),
+                htmlToPlain(system.path("trigger").asText("")),
+                htmlToPlain(ritual.path("primary").path("check").asText("")),
+                htmlToPlain(ritual.path("secondary").path("checks").asText("")),
+                ritual.path("secondary").path("casters").asText("")
+        );
+    }
+
+    private String formatArea(JsonNode area) {
+        String details = area.path("details").asText("");
+        if (!details.isBlank()) {
+            return htmlToPlain(details);
+        }
+        String type = area.path("type").asText("");
+        int distance = area.path("value").asInt(0);
+        return distance > 0 && !type.isBlank() ? distance + "-foot " + type : type;
+    }
+
+    private String formatDefense(JsonNode defense) {
+        var save = defense.path("save");
+        String statistic = save.path("statistic").asText("");
+        String passive = defenseName(defense.path("passive").path("statistic").asText(""));
+        if (statistic.isBlank()) {
+            return passive;
+        }
+        String saveName = (save.path("basic").asBoolean(false) ? "Basic " : "") + defenseName(statistic);
+        return passive.isBlank() ? saveName : passive + " and " + saveName;
+    }
+
+    private String defenseName(String statistic) {
+        return switch (statistic) {
+            case "ac" -> "AC";
+            case "fortitude" -> "Fortitude";
+            case "reflex" -> "Reflex";
+            case "will" -> "Will";
+            case "fortitude-dc" -> "Fortitude DC";
+            case "reflex-dc" -> "Reflex DC";
+            case "will-dc" -> "Will DC";
+            default -> statistic;
+        };
+    }
+
     private SpellKind inferKind(JsonNode system, String sourcePath) {
         String category = system.path("category").path("value").asText(system.path("category").asText(""));
         if ("focus".equalsIgnoreCase(category)) {
             return SpellKind.FOCUS;
         }
-        if ("ritual".equalsIgnoreCase(category)) {
+        if ("ritual".equalsIgnoreCase(category) || system.path("ritual").isObject()) {
             return SpellKind.RITUAL;
         }
 
@@ -113,6 +165,9 @@ public class FoundrySpellJsonParser {
     }
 
     private String htmlToPlain(String html) {
+        if (html.isBlank()) {
+            return "";
+        }
         var body = Jsoup.parseBodyFragment(html.replaceAll("\\R", " ")).body();
         body.select("li").forEach(item -> item.prependText("• "));
         body.select("br, hr, p, li, h1, h2, h3, h4, h5, h6")

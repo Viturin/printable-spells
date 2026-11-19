@@ -4,6 +4,7 @@ import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.adapters.out.filesystem.FileSpellCardJobStore;
 import io.github.viturin.spellcards.application.model.SpellCardJobStatus;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
+import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
 import io.github.viturin.spellcards.domain.port.SpellRepository;
 import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import io.github.viturin.spellcards.worker.pdf.SpellCardPdfRenderer;
@@ -14,7 +15,10 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -120,6 +124,38 @@ class SpellCardJobWorkerTest {
             assertTrue(text.contains("CONTINUED"));
             assertTrue(text.contains("Continued on card 2"));
             assertTrue(text.replaceAll("\\s+", " ").contains("Final words."));
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "1, ◆",
+            "2, ◆◆",
+            "3, ◆◆◆",
+            "1 to 3, ◆–◆◆◆",
+            "2 or 3, ◆◆/◆◆◆",
+            "free, ◇",
+            "reaction, ↶",
+            "10 minutes, Cast: 10 minutes"
+    })
+    void printsCastingIconsOrTheActualCastingTimeWithRulesDetails(String actionCost, String expectedCast) throws Exception {
+        var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(3).actionCost(actionCost)
+                .range("500 feet").description("An effect.\n\nHeightened (+1) The effect improves.")
+                .castingDetails(new SpellCastingDetails("20-foot burst", "Basic Reflex", "", "1 gp", "", "", "", ""))
+                .build();
+        var output = new ByteArrayOutputStream();
+
+        new SpellCardPdfRenderer().render(List.of(spell), SpellCardPdfLayout.PLAYING_CARD, output);
+
+        try (var document = Loader.loadPDF(output.toByteArray())) {
+            assertEquals(1, document.getNumberOfPages());
+            String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
+            assertTrue(text.contains(expectedCast), text);
+            assertTrue(text.contains("RANK 3"), text);
+            assertTrue(text.contains("Area: 20-foot burst"), text);
+            assertTrue(text.contains("Defense: Basic Reflex"), text);
+            assertTrue(text.contains("Cost: 1 gp"), text);
+            assertTrue(text.contains("Heightened (+1)"), text);
         }
     }
 

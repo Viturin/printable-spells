@@ -2,6 +2,7 @@ package io.github.viturin.spellcards.worker.pdf;
 
 import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.domain.model.Spell;
+import io.github.viturin.spellcards.domain.model.SpellKind;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -15,6 +16,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 @Component
 public class SpellCardPdfRenderer {
@@ -23,15 +25,23 @@ public class SpellCardPdfRenderer {
     private static final float CARD_HEIGHT = 3.5f * POINTS_PER_INCH;
     private static final int SHEET_COLUMNS = 3;
     private static final int SHEET_ROWS = 3;
-    private static final float PADDING = 11;
-    private static final float HEADING_TOP = CARD_HEIGHT - 17;
+    private static final float FRAME = 3;
+    private static final float PADDING = 8;
+    private static final float HEADING_TOP = CARD_HEIGHT - 7;
     private static final float LINE_WIDTH = CARD_WIDTH - 2 * PADDING;
-    private static final float CONTINUATION_SPACE = 12;
-    private static final Color ACCENT = new Color(0x852b43);
+    private static final float BADGE_WIDTH = 43;
+    private static final float BADGE_HEIGHT = 21;
+    private static final float CONTINUATION_SPACE = 11;
+    private static final Color FRAME_COLOR = new Color(0x262c30);
+    private static final Color PAPER = new Color(0xfffbf3);
+    private static final Color TYPE_STRIP = new Color(0xe9ddc5);
     private static final Color INK = new Color(0x262120);
     private static final Color MUTED = new Color(0x534843);
-    private static final Color DIVIDER = new Color(0xddd2cb);
     private static final Color CUT_GUIDE = new Color(0x817770);
+    private static final Color SPELL_ACCENT = new Color(0x29484a);
+    private static final Color FOCUS_ACCENT = new Color(0x4c3b60);
+    private static final Color RITUAL_ACCENT = new Color(0x563a29);
+    private static final Pattern VARIABLE_ACTIONS = Pattern.compile("([1-3]) (to|or) ([1-3])");
 
     public void render(List<Spell> spells, SpellCardPdfLayout layout, OutputStream output) throws IOException {
         try (var document = new PDDocument();
@@ -50,39 +60,66 @@ public class SpellCardPdfRenderer {
 
     private void addSpellCards(List<Card> cards, Spell spell, PDType0Font regular, PDType0Font bold)
             throws IOException {
-        List<Line> body = new ArrayList<>();
-        appendField(body, "Actions", spell.actionCost(), regular);
-        appendField(body, "Range", spell.range(), regular);
-        appendField(body, "Target", spell.target(), regular);
+        Color accent = switch (spell.kind()) {
+            case SPELL -> SPELL_ACCENT;
+            case FOCUS -> FOCUS_ACCENT;
+            case RITUAL -> RITUAL_ACCENT;
+        };
+        ActionBadge cast = actionBadge(spell.actionCost());
+        List<String> rules = new ArrayList<>();
+        var casting = spell.castingDetails();
+        if (cast == null) {
+            addField(rules, "Cast", spell.actionCost());
+        }
+        addField(rules, "Trigger", casting.trigger());
+        addField(rules, "Requirements", casting.requirements());
+        addField(rules, "Cost", casting.cost());
+        addField(rules, "Range", spell.range());
+        addField(rules, "Area", casting.area());
+        addField(rules, "Targets", spell.target());
+        addField(rules, "Defense", casting.defense());
         String duration = spell.duration();
         if (spell.sustained()) {
             duration = duration.isBlank() ? "Sustained" : duration + " (sustained)";
         }
-        appendField(body, "Duration", duration, regular);
-        appendField(body, "Traditions", String.join(", ", spell.traditions()), regular);
-        appendField(body, "Traits", String.join(", ", spell.traits()), regular);
-        if (!spell.description().isBlank()) {
-            if (!body.isEmpty()) {
-                body.add(new Line("", regular, 4, INK));
-            }
-            append(body, spell.description(), regular, 8.5f, INK);
-        }
+        addField(rules, "Duration", duration);
+        addField(rules, "Primary Check", casting.primaryCheck());
+        addField(rules, "Secondary Checks", casting.secondaryChecks());
+        addField(rules, "Secondary Casters", casting.secondaryCasters());
+        addField(rules, "Traditions", String.join(", ", spell.traditions()));
+        addField(rules, "Traits", String.join(", ", spell.traits().stream().filter(trait -> !trait.equals("cantrip")).toList()));
+        List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
 
         int bodyIndex = 0;
         for (int part = 1; part == 1 || bodyIndex < body.size(); part++) {
-            List<Line> heading = new ArrayList<>();
-            String label = part == 1
-                    ? spell.kind().name() + "  ·  LEVEL " + spell.level() + "  ·  " + spell.rarity().toUpperCase(Locale.ROOT)
-                    : "CONTINUED  ·  PART " + part;
-            append(heading, label, bold, 7.5f, ACCENT);
-            append(heading, spell.name(), bold, 15, INK);
-            float bodyStart = HEADING_TOP - 9;
-            for (Line line : heading) {
-                bodyStart -= line.height();
+            ActionBadge badge = part == 1 ? cast : null;
+            List<Line> title = new ArrayList<>();
+            List<Line> type = new ArrayList<>();
+            String kind = spell.kind().name();
+            if (spell.traits().contains("cantrip")) {
+                kind = spell.kind() == SpellKind.FOCUS ? "FOCUS CANTRIP" : "CANTRIP";
             }
+            String label = part == 1
+                    ? kind + "  ·  RANK " + spell.level() + "  ·  " + spell.rarity().toUpperCase(Locale.ROOT)
+                    : "CONTINUED  ·  PART " + part;
+            append(title, spell.name(), bold, 13, PAPER, badge == null ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - 5);
+            append(type, label, bold, 7, accent);
+            float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
+            float titleBottom = HEADING_TOP - Math.max(titleHeight, badge == null ? 0 : BADGE_HEIGHT) - 3;
+            float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
+            float bodyStart = typeBottom - 5;
 
             int start = bodyIndex;
             float remaining = bodyStart - PADDING;
+            if (part == 1) {
+                for (float largerSize : new float[]{10, 9.2f}) {
+                    var largerBody = bodyLines(rules, spell.description(), regular, largerSize);
+                    if (largerBody.stream().mapToDouble(Line::height).sum() <= remaining) {
+                        body = largerBody;
+                        break;
+                    }
+                }
+            }
             while (bodyIndex < body.size() && remaining >= body.get(bodyIndex).height()) {
                 remaining -= body.get(bodyIndex++).height();
             }
@@ -93,8 +130,8 @@ public class SpellCardPdfRenderer {
             if (start == bodyIndex && bodyIndex < body.size()) {
                 throw new IOException("Spell heading leaves no space for card content.");
             }
-            Line footer = hasContinuation ? new Line("Continued on card " + (part + 1), bold, 7, ACCENT) : null;
-            cards.add(new Card(heading, body.subList(start, bodyIndex), footer));
+            Line footer = hasContinuation ? new Line("Continued on card " + (part + 1), bold, 7, accent) : null;
+            cards.add(new Card(title, type, body.subList(start, bodyIndex), footer, badge, accent, titleBottom, typeBottom));
         }
     }
 
@@ -122,20 +159,25 @@ public class SpellCardPdfRenderer {
 
     private void drawCard(PDPageContentStream content, Card card, float left, float bottom) throws IOException {
         float x = left + PADDING;
-        content.setNonStrokingColor(ACCENT);
-        content.addRect(x, bottom + CARD_HEIGHT - 12, 22, 2);
-        content.fill();
+        fill(content, FRAME_COLOR, left + 0.75f, bottom + 0.75f, CARD_WIDTH - 1.5f, CARD_HEIGHT - 1.5f);
+        fill(content, PAPER, left + FRAME, bottom + FRAME, CARD_WIDTH - 2 * FRAME, CARD_HEIGHT - 2 * FRAME);
+        fill(content, card.accent(), left + FRAME, bottom + card.titleBottom(),
+                CARD_WIDTH - 2 * FRAME, CARD_HEIGHT - FRAME - card.titleBottom());
+        fill(content, TYPE_STRIP, left + FRAME, bottom + card.typeBottom(),
+                CARD_WIDTH - 2 * FRAME, card.titleBottom() - card.typeBottom());
 
         float y = bottom + HEADING_TOP;
-        for (Line line : card.heading()) {
+        for (Line line : card.title()) {
             y = drawLine(content, line, x, y);
         }
-        content.setStrokingColor(DIVIDER);
-        content.setLineWidth(0.5f);
-        content.moveTo(x, y - 3);
-        content.lineTo(left + CARD_WIDTH - PADDING, y - 3);
-        content.stroke();
-        y -= 9;
+        if (card.badge() != null) {
+            drawBadge(content, card, left + CARD_WIDTH - PADDING - BADGE_WIDTH, bottom + HEADING_TOP);
+        }
+        y = bottom + card.titleBottom() - 2;
+        for (Line line : card.type()) {
+            y = drawLine(content, line, x, y);
+        }
+        y = bottom + card.typeBottom() - 5;
         for (Line line : card.body()) {
             y = drawLine(content, line, x, y);
         }
@@ -166,31 +208,105 @@ public class SpellCardPdfRenderer {
         content.stroke();
     }
 
-    private void appendField(List<Line> lines, String name, String value, PDType0Font font) throws IOException {
+    private void addField(List<String> fields, String name, String value) {
         if (!value.isBlank()) {
-            append(lines, name + ": " + value, font, 8, MUTED);
+            fields.add(name + ": " + value);
         }
     }
 
+    private List<Line> bodyLines(List<String> rules, String description, PDType0Font regular, float size)
+            throws IOException {
+        List<Line> lines = new ArrayList<>();
+        float ruleSize = size - 0.7f;
+        for (int index = 0; index < rules.size(); index++) {
+            String row = rules.get(index);
+            if (index + 1 < rules.size()) {
+                String pair = row + "   ·   " + rules.get(index + 1);
+                if (!pair.contains("\n") && width(regular, ruleSize, printableText(pair, regular)) <= LINE_WIDTH) {
+                    row = pair;
+                    index++;
+                }
+            }
+            append(lines, row, regular, ruleSize, MUTED);
+        }
+        if (!description.isBlank()) {
+            if (!lines.isEmpty()) {
+                lines.add(new Line("", regular, 2, INK));
+            }
+            for (String paragraph : description.split("\\R", -1)) {
+                if (paragraph.isBlank()) {
+                    lines.add(new Line("", regular, 2, INK));
+                } else {
+                    append(lines, paragraph, regular, size, INK);
+                }
+            }
+        }
+        return lines;
+    }
+
+    private ActionBadge actionBadge(String actionCost) {
+        String action = actionCost.strip().toLowerCase(Locale.ROOT);
+        return switch (action) {
+            case "1", "2", "3" -> new ActionBadge("◆".repeat(Integer.parseInt(action)), "CAST");
+            case "free", "free action" -> new ActionBadge("◇", "FREE");
+            case "reaction" -> new ActionBadge("↶", "REACTION");
+            default -> {
+                var range = VARIABLE_ACTIONS.matcher(action);
+                if (range.matches()) {
+                    String joiner = range.group(2).equals("or") ? "/" : "–";
+                    yield new ActionBadge("◆".repeat(Integer.parseInt(range.group(1))) + joiner
+                            + "◆".repeat(Integer.parseInt(range.group(3))), "CAST");
+                }
+                yield null;
+            }
+        };
+    }
+
+    private void drawBadge(PDPageContentStream content, Card card, float left, float top) throws IOException {
+        fill(content, TYPE_STRIP, left, top - BADGE_HEIGHT, BADGE_WIDTH, BADGE_HEIGHT);
+        var font = card.title().getFirst().font();
+        String symbols = card.badge().symbols();
+        float size = Math.min(9, 9 * (BADGE_WIDTH - 4) / width(font, 9, symbols));
+        drawCentered(content, new Line(symbols, font, size, card.accent()), left, top - 2);
+        drawCentered(content, new Line(card.badge().caption(), font, 5.8f, card.accent()), left, top - 12.5f);
+    }
+
+    private void drawCentered(PDPageContentStream content, Line line, float left, float top) throws IOException {
+        float offset = (BADGE_WIDTH - width(line.font(), line.fontSize(), line.text())) / 2;
+        drawLine(content, line, left + offset, top);
+    }
+
+    private void fill(PDPageContentStream content, Color color, float x, float y, float width, float height)
+            throws IOException {
+        content.setNonStrokingColor(color);
+        content.addRect(x, y, width, height);
+        content.fill();
+    }
+
     private void append(List<Line> lines, String text, PDType0Font font, float fontSize, Color color) throws IOException {
+        append(lines, text, font, fontSize, color, LINE_WIDTH);
+    }
+
+    private void append(List<Line> lines, String text, PDType0Font font, float fontSize, Color color, float lineWidth)
+            throws IOException {
         for (String paragraph : text.split("\\R", -1)) {
             StringBuilder line = new StringBuilder();
             for (String word : paragraph.strip().split("(?U)\\s+")) {
                 String printable = printableText(word, font);
-                if (!line.isEmpty() && width(font, fontSize, line + " " + printable) > LINE_WIDTH) {
+                if (!line.isEmpty() && width(font, fontSize, line + " " + printable) > lineWidth) {
                     lines.add(new Line(line.toString(), font, fontSize, color));
                     line.setLength(0);
                 }
                 if (!line.isEmpty()) {
                     line.append(' ');
                 }
-                if (width(font, fontSize, printable) <= LINE_WIDTH) {
+                if (width(font, fontSize, printable) <= lineWidth) {
                     line.append(printable);
                     continue;
                 }
                 for (int codePoint : printable.codePoints().toArray()) {
                     String glyph = Character.toString(codePoint);
-                    if (!line.isEmpty() && width(font, fontSize, line + glyph) > LINE_WIDTH) {
+                    if (!line.isEmpty() && width(font, fontSize, line + glyph) > lineWidth) {
                         lines.add(new Line(line.toString(), font, fontSize, color));
                         line.setLength(0);
                     }
@@ -236,12 +352,16 @@ public class SpellCardPdfRenderer {
         return top - line.height();
     }
 
-    private record Card(List<Line> heading, List<Line> body, Line footer) {
+    private record Card(List<Line> title, List<Line> type, List<Line> body, Line footer,
+                        ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
+    }
+
+    private record ActionBadge(String symbols, String caption) {
     }
 
     private record Line(String text, PDType0Font font, float fontSize, Color color) {
         float height() {
-            return fontSize + 3;
+            return fontSize + 2.3f;
         }
     }
 }
