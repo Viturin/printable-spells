@@ -123,8 +123,8 @@ On a push to `main`, `.github/workflows/deploy.yml` publishes the images and dis
 - Exposes async job enqueue endpoint: `POST /api/v1/spellcards/jobs`.
 - Records each job in `runtime/spellcard-jobs/<job-id>/job.json` before publishing. Local Compose shares the `spellcards-artifacts` volume between the API and worker. When running the processes directly from different working directories, set `SPELLCARDS_ARTIFACT_DIR` to the same absolute path for each.
 - Publishes job messages to RabbitMQ queue `spellcards.pdf.jobs`.
-- Generates an A4 PDF in `spellcards-worker` and retains it for 24 hours after completion by default.
+- Generates playing-card pages or A4 cut sheets in `spellcards-worker` and retains the PDF for 24 hours after completion by default.
 - Provides job status and PDF download endpoints under `/api/v1/spellcards/jobs/{jobId}`.
 - Provides a frontend for live spell search and card-oriented output.
 
-Select spells and choose **Generate PDF**. The browser checks progress while the worker generates the document and attempts a download when it is ready. Use **Download PDF** if your browser blocks automatic downloads or you want another copy.
+Select spells, choose **A4 cut sheets** or **Playing-card pages**, then click **Generate PDF**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets hold up to nine cards and include cut guides. Print at **Actual size** or **100%** to preserve the dimensions. The browser attempts a download when the PDF is ready and keeps a **Download PDF** link available.

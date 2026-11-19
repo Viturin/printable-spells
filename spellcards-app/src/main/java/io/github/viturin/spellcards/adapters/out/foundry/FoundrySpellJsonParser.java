@@ -119,6 +119,8 @@ public class FoundrySpellJsonParser {
                 .forEach(element -> element.after(new TextNode("\n")));
         return body.wholeText()
                 .replaceAll("@\\w+\\[[^\\]\\n]*]\\{([^}\\n]+)}", "$1")
+                .replaceAll("@Template\\[(?:type:)?(burst|cone|emanation|line)\\|distance:(\\d+)]",
+                        "$2-foot $1")
                 .replaceAll("(?U)[^\\S\\n]+", " ").replaceAll(" *\\n *", "\n")
                 .replaceAll("\\n{3,}", "\n\n").strip();
     }

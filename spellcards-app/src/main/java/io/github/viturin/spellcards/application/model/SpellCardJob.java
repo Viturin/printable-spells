@@ -7,6 +7,7 @@ import java.util.UUID;
 public record SpellCardJob(
         UUID jobId,
         List<String> spellNames,
+        SpellCardPdfLayout layout,
         SpellCardJobStatus status,
         Instant createdAt,
         Instant updatedAt,
@@ -15,5 +16,8 @@ public record SpellCardJob(
 ) {
     public SpellCardJob {
         spellNames = List.copyOf(spellNames);
+        if (layout == null) {
+            layout = SpellCardPdfLayout.A4_SHEET;
+        }
     }
 }

@@ -1,5 +1,6 @@
 package io.github.viturin.spellcards.application.service;
 
+import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.application.port.in.SpellCardJobSubmissionService;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublicationException;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
@@ -23,7 +24,7 @@ public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
     }
 
     @Override
-    public UUID submit(List<String> spellNames) {
+    public UUID submit(List<String> spellNames, SpellCardPdfLayout layout) {
         List<String> normalizedSpellNames = spellNames == null
                 ? List.of()
                 : spellNames.stream()
@@ -37,7 +38,7 @@ public class QueueSpellCardJobService implements SpellCardJobSubmissionService {
         }
 
         UUID jobId = UUID.randomUUID();
-        jobStore.createQueued(jobId, normalizedSpellNames);
+        jobStore.createQueued(jobId, normalizedSpellNames, layout);
         try {
             jobPublisher.publish(new SpellCardJobMessage(jobId, normalizedSpellNames));
         } catch (SpellCardJobPublicationException exception) {

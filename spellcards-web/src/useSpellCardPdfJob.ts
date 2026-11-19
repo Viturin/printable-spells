@@ -3,6 +3,7 @@ import type {
   CreateSpellCardJobResponse,
   ErrorResponse,
   SpellCardJobResponse,
+  SpellCardPdfLayout,
 } from "./generated/client/src/models";
 
 const jobsUrl = "/api/v1/spellcards/jobs";
@@ -128,7 +129,7 @@ export function useSpellCardPdfJob() {
 
   const active = job.kind === "submitting" || job.kind === "checking" || job.kind === "paused";
 
-  async function generate(spellNames: string[]) {
+  async function generate(spellNames: string[], layout: SpellCardPdfLayout) {
     if (active || submission.current !== null || spellNames.length === 0) {
       return;
     }
@@ -139,7 +140,7 @@ export function useSpellCardPdfJob() {
       const response = await fetch(jobsUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spellNames }),
+        body: JSON.stringify({ spellNames, layout }),
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(requestTimeoutMs)]),
       });
       if (!response.ok) {

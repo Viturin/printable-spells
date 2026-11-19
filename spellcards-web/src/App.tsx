@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { SpellCardPdfLayout } from "./generated/client/src/models";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
 type SpellSummary = {
@@ -91,6 +92,7 @@ export function App() {
   const [query, setQuery] = useState("daze");
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
+  const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { job, active, generate, resumeChecking, stopChecking } = useSpellCardPdfJob();
@@ -261,12 +263,29 @@ export function App() {
             ) : <p className="emptyState emptySelection">Add spells from search to build your PDF.</p>}
           </div>
           <div className="panelFooter">
+            <label className="pdfLayout">
+              <span>PDF layout</span>
+              <select
+                value={pdfLayout}
+                disabled={active}
+                aria-describedby="pdf-layout-hint"
+                onChange={(event) => setPdfLayout(event.target.value as SpellCardPdfLayout)}
+              >
+                <option value="A4_SHEET">A4 cut sheets</option>
+                <option value="PLAYING_CARD">Playing-card pages</option>
+              </select>
+            </label>
+            <p className="pdfLayoutHint" id="pdf-layout-hint">
+              {pdfLayout === "A4_SHEET"
+                ? "Up to 9 cards per sheet. Print at 100% to keep the card size."
+                : "One 63.5 × 88.9 mm card per page."}
+            </p>
             <div className="pdfActions">
               <button
                 className="primaryButton"
                 type="button"
                 disabled={selectedSpells.length === 0 || active}
-                onClick={() => void generate(selectedSpells.map((spell) => spell.name))}
+                onClick={() => void generate(selectedSpells.map((spell) => spell.name), pdfLayout)}
               >
                 Generate PDF
               </button>
