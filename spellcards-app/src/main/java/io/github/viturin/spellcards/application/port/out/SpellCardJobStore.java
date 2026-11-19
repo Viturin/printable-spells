@@ -3,6 +3,7 @@ package io.github.viturin.spellcards.application.port.out;
 import io.github.viturin.spellcards.application.model.SpellCardJob;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
 import java.util.List;
@@ -13,6 +14,8 @@ public interface SpellCardJobStore {
     void createQueued(UUID jobId, List<String> spellNames);
 
     Optional<SpellCardJob> find(UUID jobId);
+
+    Optional<InputStream> openPdf(UUID jobId) throws IOException;
 
     void markProcessing(UUID jobId);
 

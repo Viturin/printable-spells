@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -54,6 +55,15 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
     @Override
     public Optional<SpellCardJob> find(UUID jobId) {
         return readManifest(jobDirectory(jobId)).map(job -> expire(job, Instant.now()));
+    }
+
+    @Override
+    public Optional<InputStream> openPdf(UUID jobId) throws IOException {
+        try {
+            return Optional.of(Files.newInputStream(jobDirectory(jobId).resolve(PDF_FILE)));
+        } catch (NoSuchFileException exception) {
+            return Optional.empty();
+        }
     }
 
     private Optional<SpellCardJob> readManifest(Path directory) {
