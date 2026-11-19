@@ -25,7 +25,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -37,7 +38,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-:where(button, a, input, select, summary):focus-visible {
+:where(button, a, input, select, summary, textarea):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -180,6 +181,69 @@ dd {
   background: var(--muted);
   transform: rotate(45deg);
   transform-origin: left;
+}
+
+.pathbuilderImport {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  font-size: 0.84rem;
+}
+
+.pathbuilderImport summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.pathbuilderImport form {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.pathbuilderImport label,
+.importResult {
+  color: var(--muted);
+}
+
+.pathbuilderImport textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: inherit;
+  font-family: ui-monospace, monospace;
+}
+
+.pathbuilderImport button {
+  justify-self: start;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.pathbuilderImport button:disabled {
+  opacity: 0.65;
+}
+
+.importResult p + p {
+  margin-top: 7px;
+}
+
+.importResult ul {
+  max-height: 9rem;
+  margin: 4px 0 0;
+  padding-inline-start: 1.25rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
 }
 
 .panelBody {

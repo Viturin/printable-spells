@@ -27,6 +27,16 @@ class SearchSpellsServiceTest {
     }
 
     @Test
+    void resolvesUniqueExactNamesInInputOrderAndReportsMissingNames() {
+        SearchSpellsService service = new SearchSpellsService(new InMemoryRepo(sampleSpells()));
+
+        var result = service.resolveNames(List.of(" Extend Spell ", "Daz", "DAZE", "extend spell", "daz"));
+
+        assertEquals(List.of("Extend Spell", "Daze"), result.matches().stream().map(Spell::name).toList());
+        assertEquals(List.of("Daz"), result.unmatchedNames());
+    }
+
+    @Test
     void filtersByKind() {
         SearchSpellsService service = new SearchSpellsService(new InMemoryRepo(sampleSpells()));
 

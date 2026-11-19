@@ -1,21 +1,7 @@
 import { useEffect, useState } from "react";
-import type { SpellCardPdfLayout } from "./generated/client/src/models";
+import type { SpellCardPdfLayout, SpellSummary } from "./generated/client/src/models";
+import { PathbuilderImport } from "./PathbuilderImport";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
-
-type SpellSummary = {
-  id: string;
-  name: string;
-  level: number;
-  kind: "SPELL" | "FOCUS" | "RITUAL";
-  rarity: string;
-  traditions: string[];
-  traits: string[];
-  actionCost?: string;
-  range?: string;
-  target?: string;
-  description?: string;
-  score: number;
-};
 
 type SpellSearchResponse = {
   items: SpellSummary[];
@@ -193,11 +179,18 @@ export function App() {
   }
 
   function addSpell(spell: SpellSummary) {
+    addSpells([spell]);
+  }
+
+  function addSpells(spells: SpellSummary[]) {
     setSelectedSpells((current) => {
-      if (current.some((item) => item.id === spell.id)) {
-        return current;
+      const byId = new Map(current.map((spell) => [spell.id, spell]));
+      for (const spell of spells) {
+        if (!byId.has(spell.id)) {
+          byId.set(spell.id, spell);
+        }
       }
-      return [...current, spell];
+      return [...byId.values()];
     });
   }
 
@@ -235,6 +228,7 @@ export function App() {
                 placeholder="Search by spell name"
               />
             </form>
+            <PathbuilderImport onImport={addSpells} />
           </div>
           <div className="panelBody" aria-busy={isLoading}>
             {error ? <p className="emptyState error" role="alert">{error}</p> : null}
