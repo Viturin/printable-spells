@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Printable Spells API
   version: 0.1.0
-  description: API contract for fuzzy searching PF2e spells.
+  description: API contract for finding PF2e spells and generating spell cards.
 
 servers:
   - url: http://localhost:8080
@@ -61,6 +61,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/spells/resolve:
+    post:
+      tags:
+        - Spells
+      operationId: resolveSpellNames
+      summary: Resolve exact spell names in bulk
+      description: Matches names case-insensitively, in input order, and reports unmatched names.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveSpellNamesRequest'
+      responses:
+        '200':
+          description: Matched spells and unmatched names.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveSpellNamesResponse'
+        '400':
+          description: Invalid list of spell names.
   /api/v1/spellcards/jobs:
     post:
       tags:
@@ -261,6 +283,34 @@ components:
           nullable: true
           description: Cursor for the next page, null when no more results.
           example: eyJvZmZzZXQiOjIwfQ==
+
+    ResolveSpellNamesRequest:
+      type: object
+      required:
+        - names
+      properties:
+        names:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+          example: [Daze, Heal]
+
+    ResolveSpellNamesResponse:
+      type: object
+      required:
+        - items
+        - unmatchedNames
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpellSummary'
+        unmatchedNames:
+          type: array
+          items:
+            type: string
 
     CreateSpellCardJobRequest:
       type: object

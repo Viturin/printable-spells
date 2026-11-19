@@ -2,6 +2,7 @@ package io.github.viturin.spellcards.application.service;
 
 import io.github.viturin.spellcards.application.port.in.SearchSpellsResult;
 import io.github.viturin.spellcards.application.port.in.SearchSpellsResultItem;
+import io.github.viturin.spellcards.application.port.in.SpellNameResolution;
 import io.github.viturin.spellcards.application.port.in.SpellSearchService;
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.domain.model.SpellKind;
@@ -9,8 +10,10 @@ import io.github.viturin.spellcards.domain.port.SpellRepository;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -50,6 +53,23 @@ public class SearchSpellsService implements SpellSearchService {
                 ? Optional.of(encodeOffset(toIndex))
                 : Optional.empty();
         return new SearchSpellsResult(page, nextCursor);
+    }
+
+    @Override
+    public SpellNameResolution resolveNames(List<String> names) {
+        List<Spell> matches = new ArrayList<>();
+        List<String> unmatched = new ArrayList<>();
+        var seen = new HashSet<String>();
+        for (String input : names) {
+            if (input == null || input.isBlank()) {
+                throw new IllegalArgumentException("Spell names must not be blank");
+            }
+            String name = input.strip();
+            if (seen.add(name.toLowerCase(Locale.ROOT))) {
+                spellRepository.findByName(name).ifPresentOrElse(matches::add, () -> unmatched.add(name));
+            }
+        }
+        return new SpellNameResolution(matches, unmatched);
     }
 
     private double computeScore(String query, Spell spell) {

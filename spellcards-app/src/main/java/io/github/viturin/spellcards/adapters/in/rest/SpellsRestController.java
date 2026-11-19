@@ -1,9 +1,11 @@
 package io.github.viturin.spellcards.adapters.in.rest;
 
 import io.github.viturin.spellcards.application.port.in.SearchSpellsResult;
-import io.github.viturin.spellcards.application.port.in.SearchSpellsResultItem;
 import io.github.viturin.spellcards.application.port.in.SpellSearchService;
+import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.generated.api.SpellsApi;
+import io.github.viturin.spellcards.generated.model.ResolveSpellNamesRequest;
+import io.github.viturin.spellcards.generated.model.ResolveSpellNamesResponse;
 import io.github.viturin.spellcards.generated.model.SpellKind;
 import io.github.viturin.spellcards.generated.model.SpellRarity;
 import io.github.viturin.spellcards.generated.model.SpellSearchResponse;
@@ -29,27 +31,36 @@ public class SpellsRestController implements SpellsApi {
         );
 
         SpellSearchResponse response = new SpellSearchResponse(
-                result.items().stream().map(this::toSummary).toList()
+                result.items().stream().map(item -> toSummary(item.spell(), item.score())).toList()
         );
         result.nextCursor().ifPresent(response::nextCursor);
         return ResponseEntity.ok(response);
     }
 
-    private SpellSummary toSummary(SearchSpellsResultItem item) {
+    @Override
+    public ResponseEntity<ResolveSpellNamesResponse> resolveSpellNames(ResolveSpellNamesRequest request) {
+        var result = searchSpellsService.resolveNames(request.getNames());
+        return ResponseEntity.ok(new ResolveSpellNamesResponse(
+                result.matches().stream().map(spell -> toSummary(spell, 1)).toList(),
+                result.unmatchedNames()
+        ));
+    }
+
+    private SpellSummary toSummary(Spell spell, double score) {
         SpellSummary summary = new SpellSummary(
-                item.spell().id(),
-                item.spell().name(),
-                item.spell().level(),
-                SpellKind.fromValue(item.spell().kind().name()),
-                mapRarity(item.spell().rarity()),
-                item.spell().traditions(),
-                item.spell().traits(),
-                item.score()
+                spell.id(),
+                spell.name(),
+                spell.level(),
+                SpellKind.fromValue(spell.kind().name()),
+                mapRarity(spell.rarity()),
+                spell.traditions(),
+                spell.traits(),
+                score
         );
-        summary.setActionCost(item.spell().actionCost());
-        summary.setRange(item.spell().range());
-        summary.setTarget(item.spell().target());
-        summary.setDescription(item.spell().description());
+        summary.setActionCost(spell.actionCost());
+        summary.setRange(spell.range());
+        summary.setTarget(spell.target());
+        summary.setDescription(spell.description());
         return summary;
     }
 

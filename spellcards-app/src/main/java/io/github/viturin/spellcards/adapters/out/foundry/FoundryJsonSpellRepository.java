@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,7 +33,7 @@ public class FoundryJsonSpellRepository implements SpellRepository {
         if (name == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(spellsByLowerName.get(name.toLowerCase()));
+        return Optional.ofNullable(spellsByLowerName.get(name.toLowerCase(Locale.ROOT)));
     }
 
     @Override
@@ -47,7 +48,7 @@ public class FoundryJsonSpellRepository implements SpellRepository {
 
             for (JsonNode document : extractDocuments(root)) {
                 parser.parseSpell(document.toString(), SPELLS_PATH)
-                        .ifPresent(spell -> spellsByLowerName.putIfAbsent(spell.name().toLowerCase(), spell));
+                        .ifPresent(spell -> spellsByLowerName.putIfAbsent(spell.name().toLowerCase(Locale.ROOT), spell));
             }
         } catch (IOException e) {
             throw new IllegalStateException("Unable to load spells from: " + SPELLS_PATH, e);
