@@ -25,6 +25,7 @@ public class SpellCardQueueConfiguration {
     RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter converter) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(converter);
+        rabbitTemplate.setMandatory(true);
         return rabbitTemplate;
     }
 }

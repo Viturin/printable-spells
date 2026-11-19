@@ -86,14 +86,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Unable to queue the job or confirm that it was queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/spellcards/jobs/{jobId}:
+    parameters:
+      - $ref: '#/components/parameters/SpellCardJobId'
+    get:
+      tags:
+        - SpellCardJobs
+      operationId: getSpellCardJob
+      summary: Get the status of a spell card job
+      responses:
+        '200':
+          description: Current job status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpellCardJobResponse'
+        '404':
+          $ref: '#/components/responses/SpellCardJobNotFound'
+
+  /api/v1/spellcards/jobs/{jobId}/pdf:
+    parameters:
+      - $ref: '#/components/parameters/SpellCardJobId'
+    get:
+      tags:
+        - SpellCardJobs
+      operationId: downloadSpellCardJobPdf
+      summary: Download a completed spell card PDF
+      responses:
+        '200':
+          description: Completed spell cards PDF.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              example: attachment; filename="spellcards.pdf"
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/SpellCardJobNotFound'
+        '409':
+          description: The job has not completed or failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: The job has expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 tags:
   - name: Spells
     description: Spell search operations
   - name: SpellCardJobs
-    description: Asynchronous spell card generation job submission
+    description: Asynchronous spell card generation and downloads
 
 components:
+  parameters:
+    SpellCardJobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    SpellCardJobNotFound:
+      description: The job does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     SpellKind:
       type: string
@@ -206,6 +281,28 @@ components:
       type: string
       enum:
         - QUEUED
+        - PROCESSING
+        - COMPLETED
+        - FAILED
+        - EXPIRED
+
+    SpellCardJobResponse:
+      type: object
+      required:
+        - jobId
+        - status
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SpellCardJobStatus'
+        downloadUrl:
+          type: string
+          description: Same-origin PDF path, available when COMPLETED.
+        errorMessage:
+          type: string
+          description: User-facing error, available when FAILED.
 
     CreateSpellCardJobResponse:
       type: object

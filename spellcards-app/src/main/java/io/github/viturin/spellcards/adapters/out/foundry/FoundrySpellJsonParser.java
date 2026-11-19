@@ -1,5 +1,7 @@
 package io.github.viturin.spellcards.adapters.out.foundry;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.TextNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
@@ -111,9 +113,13 @@ public class FoundrySpellJsonParser {
     }
 
     private String htmlToPlain(String html) {
-        return html
-                .replaceAll("<[^>]*>", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
+        var body = Jsoup.parseBodyFragment(html.replaceAll("\\R", " ")).body();
+        body.select("li").forEach(item -> item.prependText("• "));
+        body.select("br, hr, p, li, h1, h2, h3, h4, h5, h6")
+                .forEach(element -> element.after(new TextNode("\n")));
+        return body.wholeText()
+                .replaceAll("@\\w+\\[[^\\]\\n]*]\\{([^}\\n]+)}", "$1")
+                .replaceAll("(?U)[^\\S\\n]+", " ").replaceAll(" *\\n *", "\n")
+                .replaceAll("\\n{3,}", "\n\n").strip();
     }
 }

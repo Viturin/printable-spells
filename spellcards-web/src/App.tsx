@@ -1,4 +1,5 @@
 import { type KeyboardEvent, useEffect, useState } from "react";
+import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
 type SpellSummary = {
   id: string;
@@ -68,6 +69,7 @@ export function App() {
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
   const [, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { job, active, generate, resumeChecking, stopChecking } = useSpellCardPdfJob();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -207,6 +209,31 @@ export function App() {
         <section className="card cardFixed">
           <h2>Selected Spells</h2>
           <p>{selectedSpells.length} spell(s) selected.</p>
+
+          <div className="pdfActions">
+            <button
+              type="button"
+              disabled={selectedSpells.length === 0 || active}
+              onClick={() => void generate(selectedSpells.map((spell) => spell.name))}
+            >
+              Generate PDF
+            </button>
+            {job.kind === "ready" ? (
+              <a href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
+            ) : null}
+            {job.kind === "paused" ? (
+              <>
+                <button type="button" onClick={resumeChecking}>Resume checking</button>
+                <button type="button" onClick={stopChecking}>Stop checking</button>
+              </>
+            ) : null}
+          </div>
+          <div className="pdfStatus" role="status" aria-live="polite">
+            {job.kind === "submitting" ? <p>Submitting PDF job…</p> : null}
+            {job.kind === "checking" ? <p>{job.status === "QUEUED" ? "PDF queued…" : "Generating PDF…"}</p> : null}
+            {job.kind === "ready" ? <p>PDF ready.</p> : null}
+            {job.kind === "failed" || job.kind === "paused" ? <p className="error">{job.message}</p> : null}
+          </div>
 
           <SpellList
             spells={selectedSpells}

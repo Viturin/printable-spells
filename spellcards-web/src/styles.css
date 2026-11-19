@@ -85,6 +85,25 @@ button {
   color: #e7ecff;
 }
 
+button:disabled {
+  opacity: 0.55;
+}
+
+.pdfActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pdfActions a {
+  color: #b4cfff;
+}
+
+.pdfStatus:empty {
+  position: absolute;
+}
+
 .error {
   color: #ff8d8d;
   font-weight: 600;
