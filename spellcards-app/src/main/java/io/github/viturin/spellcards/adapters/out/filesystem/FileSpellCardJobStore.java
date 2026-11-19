@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -20,6 +21,8 @@ import java.util.UUID;
 
 @Component
 public class FileSpellCardJobStore implements SpellCardJobStore {
+    private static final String MANIFEST_FILE = "job.json";
+    private static final String PDF_FILE = "spellcards.pdf";
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final Path rootDirectory;
     private final Duration retention;
@@ -50,29 +53,106 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
 
     @Override
     public Optional<SpellCardJob> find(UUID jobId) {
-        Path manifest = jobDirectory(jobId).resolve("job.json");
+        return readManifest(jobDirectory(jobId)).map(job -> expire(job, Instant.now()));
+    }
+
+    private Optional<SpellCardJob> readManifest(Path directory) {
+        Path manifest = directory.resolve(MANIFEST_FILE);
         try (var input = Files.newInputStream(manifest)) {
             return Optional.of(objectMapper.readValue(input, SpellCardJob.class));
         } catch (NoSuchFileException exception) {
             return Optional.empty();
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read spell card job " + jobId, exception);
+            throw new IllegalStateException("Unable to read spell card job " + directory.getFileName(), exception);
+        }
+    }
+
+    @Override
+    public void markProcessing(UUID jobId) {
+        updateStatus(jobId, SpellCardJobStatus.PROCESSING, null);
+    }
+
+    @Override
+    public void complete(UUID jobId, PdfWriter writer) throws IOException {
+        Path directory = jobDirectory(jobId);
+        Path stagedPdf = Files.createTempFile(directory, "spellcards-", ".tmp");
+        try {
+            try (var output = Files.newOutputStream(stagedPdf)) {
+                writer.write(output);
+            }
+            Files.move(stagedPdf, directory.resolve(PDF_FILE),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            updateStatus(jobId, SpellCardJobStatus.COMPLETED, null);
+        } finally {
+            Files.deleteIfExists(stagedPdf);
         }
     }
 
     @Override
     public void markFailed(UUID jobId, String errorMessage) {
-        SpellCardJob current = find(jobId)
+        updateStatus(jobId, SpellCardJobStatus.FAILED, errorMessage);
+    }
+
+    private void updateStatus(UUID jobId, SpellCardJobStatus status, String errorMessage) {
+        Path directory = jobDirectory(jobId);
+        SpellCardJob current = readManifest(directory)
                 .orElseThrow(() -> new IllegalStateException("Spell card job not found: " + jobId));
-        SpellCardJob failed = new SpellCardJob(
-                jobId, current.spellNames(), SpellCardJobStatus.FAILED, current.createdAt(),
-                Instant.now(), current.expiresAt(), errorMessage
+        Instant now = Instant.now();
+        SpellCardJob updated = new SpellCardJob(
+                jobId, current.spellNames(), status, current.createdAt(), now,
+                status == SpellCardJobStatus.COMPLETED ? now.plus(retention) : current.expiresAt(), errorMessage
         );
         try {
-            writeManifest(jobDirectory(jobId), failed);
+            writeManifest(directory, updated);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to mark spell card job failed: " + jobId, exception);
+            throw new IllegalStateException("Unable to update spell card job " + jobId, exception);
         }
+    }
+
+    @Override
+    public void cleanupExpired(Duration manifestRetention) {
+        Instant now = Instant.now();
+        try (var directories = Files.newDirectoryStream(rootDirectory)) {
+            for (Path directory : directories) {
+                if (Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+                    cleanupJob(directory, now, manifestRetention);
+                }
+            }
+        } catch (NoSuchFileException exception) {
+            if (Files.exists(rootDirectory)) {
+                throw new IllegalStateException("Unable to clean expired spell card jobs", exception);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to clean expired spell card jobs", exception);
+        }
+    }
+
+    private void cleanupJob(Path directory, Instant now, Duration manifestRetention) throws IOException {
+        var stored = readManifest(directory);
+        if (stored.isEmpty() || stored.get().expiresAt().isAfter(now)) {
+            return;
+        }
+        SpellCardJob original = stored.get();
+        Files.deleteIfExists(directory.resolve(PDF_FILE));
+        try (var temporaryFiles = Files.newDirectoryStream(directory, "{job,spellcards}-*.tmp")) {
+            for (Path temporaryFile : temporaryFiles) {
+                Files.deleteIfExists(temporaryFile);
+            }
+        }
+        if (!original.expiresAt().plus(manifestRetention).isAfter(now)) {
+            Files.deleteIfExists(directory.resolve(MANIFEST_FILE));
+            Files.deleteIfExists(directory);
+        } else if (original.status() != SpellCardJobStatus.EXPIRED) {
+            writeManifest(directory, expire(original, now));
+        }
+    }
+
+    private SpellCardJob expire(SpellCardJob job, Instant now) {
+        if (job.status() == SpellCardJobStatus.EXPIRED || job.expiresAt().isAfter(now)) {
+            return job;
+        }
+        return new SpellCardJob(job.jobId(), job.spellNames(), SpellCardJobStatus.EXPIRED,
+                job.createdAt(), job.expiresAt(), job.expiresAt(), null);
     }
 
     private Path jobDirectory(UUID jobId) {
@@ -83,7 +163,7 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
         Path temporaryManifest = Files.createTempFile(directory, "job-", ".tmp");
         try {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryManifest.toFile(), job);
-            Files.move(temporaryManifest, directory.resolve("job.json"),
+            Files.move(temporaryManifest, directory.resolve(MANIFEST_FILE),
                     StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } finally {
             Files.deleteIfExists(temporaryManifest);
