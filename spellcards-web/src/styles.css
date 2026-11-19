@@ -1,9 +1,16 @@
 :root {
-  font-family: "Atkinson Hyperlegible", "IBM Plex Sans", sans-serif;
-  color: #e7ecff;
-  background:
-    radial-gradient(circle at 20% 10%, #1d2436 0%, transparent 42%),
-    linear-gradient(145deg, #0f1320 0%, #1b2130 100%);
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+  font-synthesis: none;
+  color: #262120;
+  background: #f6f3ee;
+  --surface: #fffefa;
+  --surface-soft: #faf7f2;
+  --line: #e8e0d8;
+  --muted: #655b55;
+  --accent: #852b43;
+  --accent-hover: #6e2035;
+  --accent-soft: #f8ebee;
 }
 
 * {
@@ -13,160 +20,454 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: radial-gradient(ellipse at 12% 0%, #f3e6e8 0, transparent 30rem);
 }
 
-.page {
-  min-height: 100vh;
-  display: block;
-  padding: 24px;
-}
-
-.columns {
-  width: min(1200px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-  align-items: start;
-}
-
-.card {
-  width: 100%;
-  background: rgba(10, 15, 24, 0.9);
-  border: 1px solid #36405d;
-  border-radius: 4px;
-  padding: 24px;
-  box-shadow: 0 10px 28px rgba(5, 8, 14, 0.45);
-  display: grid;
-  gap: 12px;
-}
-
-.cardFixed {
-  position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
-  overflow: auto;
-  margin: 0 auto;
-}
-
-.searchForm {
-  display: grid;
-  gap: 12px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 2rem;
-}
-
-p {
-  margin: 0;
-}
-
-label {
-  font-weight: 600;
-}
-
-input,
-button {
-  font: inherit;
-  padding: 10px 12px;
-  border-radius: 3px;
-  border: 1px solid #3f4866;
-}
-
+button,
 input {
-  background: #121a2a;
-  color: #e7ecff;
+  font: inherit;
 }
 
 button {
-  background: #25304a;
-  color: #e7ecff;
+  cursor: pointer;
 }
 
 button:disabled {
-  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+:where(button, a, input, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+p,
+dl,
+dd {
+  margin: 0;
+}
+
+.page {
+  width: min(100%, 1152px);
+  margin-inline: auto;
+  padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 36px) 40px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-block-end: clamp(24px, 4vw, 40px);
+}
+
+.pageHeader h1 {
+  font-family: "DM Serif Text", Georgia, serif;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  color: #352124;
+}
+
+.pageHeader p {
+  margin-block-start: 9px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.bookIcon {
+  position: relative;
+  flex: 0 0 52px;
+  height: 52px;
+  display: grid;
+  place-content: center;
+  border-radius: 15px;
+  background: var(--accent);
+  color: #fff8f5;
+  box-shadow: 0 5px 12px #852b4324;
+}
+
+.bookIcon::before {
+  content: "";
+  width: 18px;
+  height: 22px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+}
+
+.bookIcon::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 2px;
+  top: 22px;
+  left: 23px;
+  border-radius: 2px;
+  background: currentColor;
+  box-shadow: 0 5px currentColor;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px #36201909, 0 2px 4px #36201908;
+}
+
+.panelHeader {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 14px;
+}
+
+.panel h2 {
+  font-size: 1.12rem;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.searchForm {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchForm input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 12px 9px 39px;
+  appearance: none;
+  color: inherit;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.91rem;
+}
+
+.searchForm input::placeholder {
+  color: var(--muted);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.searchIcon::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 1.5px;
+  top: 9px;
+  left: 8px;
+  background: var(--muted);
+  transform: rotate(45deg);
+  transform-origin: left;
+}
+
+.panelBody {
+  padding: 0 12px 12px;
+}
+
+.spellList {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  max-height: clamp(260px, calc(100svh - 245px), 660px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+}
+
+.spellRow {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.spellRow:has(details[open]) {
+  background: var(--surface-soft);
+}
+
+.spellSummary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 7px 86px 7px 13px;
+  border-radius: 9px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.spellSummary::-webkit-details-marker {
+  display: none;
+}
+
+.spellSummary:hover {
+  background: var(--surface-soft);
+}
+
+.disclosureIcon {
+  flex: 0 0 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(-45deg);
+  margin-inline-end: 3px;
+}
+
+details[open] .disclosureIcon {
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.spellName {
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.spellKind {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: capitalize;
+}
+
+.spellLevel,
+.selectedCount {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 28px;
+  min-height: 22px;
+  border-radius: 6px;
+  padding: 0 5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.spellLevel {
+  margin-inline-start: auto;
+}
+
+.spellAction {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 70px;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.spellAction:hover {
+  border-color: var(--accent);
+}
+
+.removeSpell {
+  background: #f2eee9;
+  color: #594a43;
+}
+
+.spellDetails {
+  margin: 0 12px;
+  border-top: 1px solid var(--line);
+  padding: 10px 3px 14px;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+  color: #473e37;
+}
+
+.spellFields {
+  display: flex;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+}
+
+.spellFields dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.spellFields dd {
+  margin-top: 3px;
+  text-transform: none;
+}
+
+.spellDescription {
+  margin-top: 12px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.selectedPanel {
+  position: sticky;
+  top: 18px;
+}
+
+.selectedHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selectedPanel .spellList {
+  max-height: clamp(200px, 45svh, 440px);
+}
+
+.emptyState {
+  padding: 10px 8px 16px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.emptySelection {
+  margin: 4px;
+  border: 1px dashed #d9cbc0;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  padding: 16px 12px;
+}
+
+.panelFooter {
+  position: relative;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 18px 18px;
+  background: var(--surface-soft);
+  padding: 14px 16px;
 }
 
 .pdfActions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
-.pdfActions a {
-  color: #b4cfff;
+.pdfActions button,
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.pdfActions button:hover:not(:disabled),
+.downloadLink:hover {
+  border-color: var(--accent);
+}
+
+.pdfActions .primaryButton {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fffefa;
+}
+
+.pdfActions .primaryButton:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.pdfActions .primaryButton:disabled {
+  background: #e8e1d9;
+  border-color: #e8e1d9;
+  color: #6d625b;
+}
+
+.pdfStatus {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
 }
 
 .pdfStatus:empty {
   position: absolute;
+  margin: 0;
 }
 
 .error {
-  color: #ff8d8d;
+  color: #9c2c35;
   font-weight: 600;
 }
 
-.results {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.resultItem {
-  border: 1px solid #37405c;
-  border-radius: 3px;
-  background: rgba(18, 25, 38, 0.9);
-  padding: 10px 12px;
-  min-height: 126px;
-  display: grid;
-  align-content: start;
-}
-
-.resultHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.resultMeta {
-  margin-top: 4px;
-  color: #a8b3d6;
-  font-size: 0.95rem;
-}
-
-.resultDescription {
-  margin: 8px 0 0;
-  color: #d2dbf3;
-}
-
-.resultItemClickable {
-  cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
-}
-
-.resultItemClickable:hover {
-  border-color: #3f8cff;
-  background: rgba(63, 140, 255, 0.1);
-}
-
-.resultItemClickable:focus-visible {
-  outline: 2px solid #3f8cff;
-  outline-offset: 1px;
-}
-
-@media (max-width: 900px) {
+@media (max-width: 850px) {
   .columns {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
 
-  .cardFixed {
+  .selectedPanel {
     position: static;
-    max-height: none;
-    margin: 0;
+  }
+
+  .spellList,
+  .selectedPanel .spellList {
+    max-height: clamp(156px, 42svh, 360px);
+  }
+}
+
+@media (max-width: 420px) {
+  .pageHeader {
+    gap: 11px;
+  }
+
+  .bookIcon {
+    flex-basis: 46px;
+    height: 46px;
+  }
+
+  .bookIcon::after {
+    top: 19px;
+    left: 20px;
+  }
+
+  .panelHeader {
+    padding-inline: 16px;
+  }
+
+  .spellKind {
+    display: none;
+  }
+
+  .spellSummary {
+    gap: 7px;
   }
 }

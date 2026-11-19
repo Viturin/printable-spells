@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
 type SpellSummary = {
@@ -29,34 +29,58 @@ type ApiErrorResponse = {
 
 type SpellListProps = {
   spells: SpellSummary[];
-  onSpellClick: (spell: SpellSummary) => void;
-  onSpellKeyDown: (event: KeyboardEvent<HTMLElement>, action: () => void) => void;
-  ariaLabelPrefix: string;
+  action: "Add" | "Remove";
+  onAction: (spell: SpellSummary) => void;
 };
 
-function SpellList({ spells, onSpellClick, onSpellKeyDown, ariaLabelPrefix }: SpellListProps) {
+function SpellDetails({ spell }: { spell: SpellSummary }) {
+  const fields = [
+    ["Type", spell.kind.toLowerCase()],
+    ["Rarity", spell.rarity],
+    ["Traditions", spell.traditions.join(", ")],
+    ["Traits", spell.traits.join(", ")],
+    ["Actions", spell.actionCost],
+    ["Range", spell.range],
+    ["Target", spell.target],
+  ].filter(([, value]) => value);
+
   return (
-    <ul className="results">
+    <div className="spellDetails">
+      <dl className="spellFields">
+        {fields.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {spell.description ? <p className="spellDescription">{spell.description}</p> : null}
+    </div>
+  );
+}
+
+function SpellList({ spells, action, onAction }: SpellListProps) {
+  return (
+    <ul className="spellList">
       {spells.map((spell) => (
-        <li
-          key={spell.id}
-          className="resultItem resultItemClickable"
-          role="button"
-          tabIndex={0}
-          onClick={() => onSpellClick(spell)}
-          onKeyDown={(event) => onSpellKeyDown(event, () => onSpellClick(spell))}
-          aria-label={`${ariaLabelPrefix} ${spell.name}`}
-        >
-          <div className="resultHeader">
-            <strong>{spell.name}</strong>
-            <span>
-              L{spell.level} • {spell.kind.toLowerCase()} • {spell.rarity}
-            </span>
-          </div>
-          <div className="resultMeta">
-            {spell.traditions.length > 0 ? spell.traditions.join(", ") : "no traditions"}
-          </div>
-          {spell.description ? <p className="resultDescription">{spell.description}</p> : null}
+        <li key={spell.id} className="spellRow">
+          <details>
+            <summary className="spellSummary">
+              <span className="disclosureIcon" aria-hidden="true" />
+              <span className="spellName">{spell.name}</span>
+              <span className="spellKind">{spell.kind.toLowerCase()}</span>
+              <span className="spellLevel" aria-label={`Level ${spell.level}`}>L{spell.level}</span>
+            </summary>
+            <SpellDetails spell={spell} />
+          </details>
+          <button
+            className={`spellAction ${action === "Add" ? "addSpell" : "removeSpell"}`}
+            type="button"
+            aria-label={`${action} ${spell.name}`}
+            onClick={() => onAction(spell)}
+          >
+            {action}
+          </button>
         </li>
       ))}
     </ul>
@@ -67,7 +91,7 @@ export function App() {
   const [query, setQuery] = useState("daze");
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
-  const [, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { job, active, generate, resumeChecking, stopChecking } = useSpellCardPdfJob();
 
@@ -88,6 +112,7 @@ export function App() {
     if (!trimmed) {
       setItems([]);
       setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -97,15 +122,20 @@ export function App() {
       const params = new URLSearchParams({ q: trimmed, limit: "20" });
       const response = await fetch(`/api/v1/spells/search?${params.toString()}`, { signal });
       if (!response.ok) {
-        setItems([]);
-        setError(await buildErrorMessage(response));
+        const message = await buildErrorMessage(response);
+        if (!signal.aborted) {
+          setItems([]);
+          setError(message);
+        }
         return;
       }
 
       const data = (await response.json()) as SpellSearchResponse;
-      setItems(data.items ?? []);
+      if (!signal.aborted) {
+        setItems(data.items ?? []);
+      }
     } catch (requestError) {
-      if (requestError instanceof DOMException && requestError.name === "AbortError") {
+      if (signal.aborted) {
         return;
       }
       const message =
@@ -113,7 +143,9 @@ export function App() {
       setItems([]);
       setError(message);
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -171,76 +203,90 @@ export function App() {
     setSelectedSpells((current) => current.filter((spell) => spell.id !== spellId));
   }
 
-  function onSpellKeyDown(event: KeyboardEvent<HTMLElement>, action: () => void) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      action();
-    }
-  }
-
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
 
   return (
     <main className="page">
+      <header className="pageHeader">
+        <span className="bookIcon" aria-hidden="true" />
+        <div>
+          <h1>Spell Cards</h1>
+          <p>Choose spells and print them as a PDF.</p>
+        </div>
+      </header>
       <div className="columns">
-        <section className="card cardFixed">
-          <h2>Find Spells</h2>
-
-          <form className="searchForm">
-            <input
-              id="spell-query"
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search spells"
-            />
-          </form>
-
-          {error ? <p className="error">{error}</p> : null}
-
-          <SpellList
-            spells={searchableItems}
-            onSpellClick={addSpell}
-            onSpellKeyDown={onSpellKeyDown}
-            ariaLabelPrefix="Move to selected spells:"
-          />
+        <section className="panel" aria-labelledby="search-heading">
+          <div className="panelHeader">
+            <h2 id="search-heading">Find spells</h2>
+            <form className="searchForm" role="search" onSubmit={(event) => event.preventDefault()}>
+              <span className="searchIcon" aria-hidden="true" />
+              <input
+                id="spell-query"
+                type="search"
+                aria-label="Search spells"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setIsLoading(true);
+                  setError(null);
+                }}
+                placeholder="Search by spell name"
+              />
+            </form>
+          </div>
+          <div className="panelBody" aria-busy={isLoading}>
+            {error ? <p className="emptyState error" role="alert">{error}</p> : null}
+            {isLoading && searchableItems.length === 0 ? <p className="emptyState">Searching…</p> : null}
+            {!error && !isLoading && searchableItems.length === 0 ? (
+              <p className="emptyState">
+                {!query.trim() ? "Enter a spell name to search." : items.length ? "All results are selected." : "No spells found."}
+              </p>
+            ) : null}
+            {searchableItems.length ? <SpellList spells={searchableItems} action="Add" onAction={addSpell} /> : null}
+          </div>
         </section>
 
-        <section className="card cardFixed">
-          <h2>Selected Spells</h2>
-          <p>{selectedSpells.length} spell(s) selected.</p>
-
-          <div className="pdfActions">
-            <button
-              type="button"
-              disabled={selectedSpells.length === 0 || active}
-              onClick={() => void generate(selectedSpells.map((spell) => spell.name))}
-            >
-              Generate PDF
-            </button>
-            {job.kind === "ready" ? (
-              <a href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
-            ) : null}
-            {job.kind === "paused" ? (
-              <>
-                <button type="button" onClick={resumeChecking}>Resume checking</button>
-                <button type="button" onClick={stopChecking}>Stop checking</button>
-              </>
-            ) : null}
+        <section className="panel selectedPanel" aria-labelledby="selected-heading">
+          <div className="panelHeader">
+            <div className="selectedHeading">
+              <h2 id="selected-heading">Selected spells</h2>
+              <output className="selectedCount" aria-label="Selected spell count">
+                {selectedSpells.length}
+              </output>
+            </div>
           </div>
-          <div className="pdfStatus" role="status" aria-live="polite">
-            {job.kind === "submitting" ? <p>Submitting PDF job…</p> : null}
-            {job.kind === "checking" ? <p>{job.status === "QUEUED" ? "PDF queued…" : "Generating PDF…"}</p> : null}
-            {job.kind === "ready" ? <p>PDF ready.</p> : null}
-            {job.kind === "failed" || job.kind === "paused" ? <p className="error">{job.message}</p> : null}
+          <div className="panelBody">
+            {selectedSpells.length ? (
+              <SpellList spells={selectedSpells} action="Remove" onAction={(spell) => removeSpell(spell.id)} />
+            ) : <p className="emptyState emptySelection">Add spells from search to build your PDF.</p>}
           </div>
-
-          <SpellList
-            spells={selectedSpells}
-            onSpellClick={(spell) => removeSpell(spell.id)}
-            onSpellKeyDown={onSpellKeyDown}
-            ariaLabelPrefix="Move back to search results:"
-          />
+          <div className="panelFooter">
+            <div className="pdfActions">
+              <button
+                className="primaryButton"
+                type="button"
+                disabled={selectedSpells.length === 0 || active}
+                onClick={() => void generate(selectedSpells.map((spell) => spell.name))}
+              >
+                Generate PDF
+              </button>
+              {job.kind === "ready" ? (
+                <a className="downloadLink" href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
+              ) : null}
+              {job.kind === "paused" ? (
+                <>
+                  <button type="button" onClick={resumeChecking}>Resume checking</button>
+                  <button type="button" onClick={stopChecking}>Stop checking</button>
+                </>
+              ) : null}
+            </div>
+            <div className="pdfStatus" role="status" aria-live="polite">
+              {job.kind === "submitting" ? <p>Submitting PDF job…</p> : null}
+              {job.kind === "checking" ? <p>{job.status === "QUEUED" ? "PDF queued…" : "Generating PDF…"}</p> : null}
+              {job.kind === "ready" ? <p>PDF ready.</p> : null}
+              {job.kind === "failed" || job.kind === "paused" ? <p className="error">{job.message}</p> : null}
+            </div>
+          </div>
         </section>
       </div>
     </main>
