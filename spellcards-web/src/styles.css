@@ -24,7 +24,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -36,7 +37,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-:where(button, a, input, summary):focus-visible {
+:where(button, a, input, select, summary):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
@@ -372,6 +373,33 @@ details[open] .disclosureIcon {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.pdfLayout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.pdfLayout select {
+  min-height: 36px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #262120;
+}
+
+.pdfLayoutHint {
+  margin-block: 7px 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .pdfActions button,

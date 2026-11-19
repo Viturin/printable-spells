@@ -1,5 +1,6 @@
 package io.github.viturin.spellcards.adapters.in.rest;
 
+import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.application.port.in.SpellCardJobSubmissionService;
 import io.github.viturin.spellcards.application.service.SpellCardJobResults;
 import io.github.viturin.spellcards.generated.api.SpellCardJobsApi;
@@ -32,7 +33,9 @@ public class SpellCardJobsRestController implements SpellCardJobsApi {
 
     @Override
     public ResponseEntity<CreateSpellCardJobResponse> createSpellCardJob(CreateSpellCardJobRequest createSpellCardJobRequest) {
-        UUID jobId = spellCardJobSubmissionService.submit(createSpellCardJobRequest.getSpellNames());
+        var requestedLayout = createSpellCardJobRequest.getLayout();
+        var layout = requestedLayout == null ? SpellCardPdfLayout.A4_SHEET : SpellCardPdfLayout.valueOf(requestedLayout.name());
+        UUID jobId = spellCardJobSubmissionService.submit(createSpellCardJobRequest.getSpellNames(), layout);
         CreateSpellCardJobResponse response = new CreateSpellCardJobResponse(
                 jobId,
                 SpellCardJobStatus.QUEUED

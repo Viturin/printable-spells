@@ -1,5 +1,6 @@
 package io.github.viturin.spellcards.adapters.in.rest;
 
+import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.adapters.out.filesystem.FileSpellCardJobStore;
 import io.github.viturin.spellcards.application.port.in.SpellCardJobSubmissionService;
 import io.github.viturin.spellcards.application.service.SpellCardJobResults;
@@ -42,7 +43,7 @@ class SpellCardJobsRestControllerTest {
 
     @Test
     void returnsAcceptedWithUuidJobId() throws Exception {
-        when(submission.submit(List.of("Daze", "Fireball"))).thenReturn(id);
+        when(submission.submit(List.of("Daze", "Fireball"), SpellCardPdfLayout.A4_SHEET)).thenReturn(id);
 
         mvc.perform(post(JOBS).contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -54,8 +55,20 @@ class SpellCardJobsRestControllerTest {
     }
 
     @Test
+    void passesTheRequestedPlayingCardLayoutToSubmission() throws Exception {
+        when(submission.submit(List.of("Daze"), SpellCardPdfLayout.PLAYING_CARD)).thenReturn(id);
+
+        mvc.perform(post(JOBS).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"spellNames":["Daze"],"layout":"PLAYING_CARD"}
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").value(id.toString()));
+    }
+
+    @Test
     void reportsQueuedAndProcessingButDoesNotOfferAnArtifact() throws Exception {
-        store.createQueued(id, List.of("Daze"));
+        store.createQueued(id, List.of("Daze"), SpellCardPdfLayout.A4_SHEET);
         mvc.perform(get(jobUrl())).andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(jsonPath("$.status").value("QUEUED"))
@@ -71,7 +84,7 @@ class SpellCardJobsRestControllerTest {
     @Test
     void offersACompletedPdfAsAnAttachment() throws Exception {
         byte[] pdf = "%PDF-1.7".getBytes(StandardCharsets.US_ASCII);
-        store.createQueued(id, List.of("Daze"));
+        store.createQueued(id, List.of("Daze"), SpellCardPdfLayout.A4_SHEET);
         store.markProcessing(id);
         store.complete(id, output -> output.write(pdf));
 
@@ -88,7 +101,7 @@ class SpellCardJobsRestControllerTest {
 
     @Test
     void reportsFailedJobsWithTheirError() throws Exception {
-        store.createQueued(id, List.of("Daze"));
+        store.createQueued(id, List.of("Daze"), SpellCardPdfLayout.A4_SHEET);
         store.markFailed(id, "Unable to generate the spell cards PDF.");
 
         mvc.perform(get(jobUrl())).andExpect(status().isOk())
@@ -101,7 +114,7 @@ class SpellCardJobsRestControllerTest {
     void reportsExpiredJobsAndRejectsTheirDownload() throws Exception {
         var expiredStore = new FileSpellCardJobStore(artifactDirectory, 0);
         configureController(expiredStore);
-        expiredStore.createQueued(id, List.of("Daze"));
+        expiredStore.createQueued(id, List.of("Daze"), SpellCardPdfLayout.A4_SHEET);
         expiredStore.complete(id, output -> output.write(1));
 
         mvc.perform(get(jobUrl())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("EXPIRED"));

@@ -59,7 +59,7 @@ public class SpellCardJobWorker {
                 }
                 spells.add(spell.get());
             }
-            jobStore.complete(jobId, output -> renderer.render(spells, output));
+            jobStore.complete(jobId, output -> renderer.render(spells, job.layout(), output));
         } catch (IOException | RuntimeException exception) {
             LOG.error("Unable to generate spell cards for job {}", jobId, exception);
             jobStore.markFailed(jobId, "Unable to generate the spell cards PDF.");

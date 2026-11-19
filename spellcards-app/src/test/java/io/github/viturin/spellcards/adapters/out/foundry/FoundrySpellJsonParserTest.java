@@ -20,7 +20,7 @@ class FoundrySpellJsonParserTest {
                   "type": "spell",
                   "system": {
                     "level": { "value": 1 },
-                    "description": { "value": "<p>Cloud the target's mind.</p><hr><p>@UUID[example]{Stunned &amp; dazed}.</p>" },
+                    "description": { "value": "<p>Cloud the target's mind in a @Template[type:cone|distance:30].</p><hr><p>@UUID[example]{Stunned &amp; dazed}.</p>" },
                     "time": { "value": "2" },
                     "range": { "value": "60 feet" },
                     "target": { "value": "1 creature" },
@@ -41,7 +41,7 @@ class FoundrySpellJsonParserTest {
         assertEquals("abc123", spell.id());
         assertEquals("Daze", spell.name());
         assertEquals(1, spell.level());
-        assertEquals("Cloud the target's mind.\n\nStunned & dazed.", spell.description());
+        assertEquals("Cloud the target's mind in a 30-foot cone.\n\nStunned & dazed.", spell.description());
         assertEquals("2", spell.actionCost());
         assertEquals("60 feet", spell.range());
         assertEquals("1 creature", spell.target());

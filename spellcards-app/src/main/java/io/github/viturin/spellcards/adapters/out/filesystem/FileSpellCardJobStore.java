@@ -3,6 +3,7 @@ package io.github.viturin.spellcards.adapters.out.filesystem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.viturin.spellcards.application.model.SpellCardJob;
 import io.github.viturin.spellcards.application.model.SpellCardJobStatus;
+import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,10 +38,10 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
     }
 
     @Override
-    public void createQueued(UUID jobId, List<String> spellNames) {
+    public void createQueued(UUID jobId, List<String> spellNames, SpellCardPdfLayout layout) {
         Instant now = Instant.now();
         SpellCardJob job = new SpellCardJob(
-                jobId, spellNames, SpellCardJobStatus.QUEUED, now, now, now.plus(retention), null
+                jobId, spellNames, layout, SpellCardJobStatus.QUEUED, now, now, now.plus(retention), null
         );
         Path directory = jobDirectory(jobId);
         try {
@@ -109,7 +110,7 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
                 .orElseThrow(() -> new IllegalStateException("Spell card job not found: " + jobId));
         Instant now = Instant.now();
         SpellCardJob updated = new SpellCardJob(
-                jobId, current.spellNames(), status, current.createdAt(), now,
+                jobId, current.spellNames(), current.layout(), status, current.createdAt(), now,
                 status == SpellCardJobStatus.COMPLETED ? now.plus(retention) : current.expiresAt(), errorMessage
         );
         try {
@@ -161,7 +162,7 @@ public class FileSpellCardJobStore implements SpellCardJobStore {
         if (job.status() == SpellCardJobStatus.EXPIRED || job.expiresAt().isAfter(now)) {
             return job;
         }
-        return new SpellCardJob(job.jobId(), job.spellNames(), SpellCardJobStatus.EXPIRED,
+        return new SpellCardJob(job.jobId(), job.spellNames(), job.layout(), SpellCardJobStatus.EXPIRED,
                 job.createdAt(), job.expiresAt(), job.expiresAt(), null);
     }
 

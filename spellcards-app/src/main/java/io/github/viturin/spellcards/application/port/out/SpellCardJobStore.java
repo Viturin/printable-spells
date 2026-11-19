@@ -1,6 +1,7 @@
 package io.github.viturin.spellcards.application.port.out;
 
 import io.github.viturin.spellcards.application.model.SpellCardJob;
+import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SpellCardJobStore {
-    void createQueued(UUID jobId, List<String> spellNames);
+    void createQueued(UUID jobId, List<String> spellNames, SpellCardPdfLayout layout);
 
     Optional<SpellCardJob> find(UUID jobId);
 

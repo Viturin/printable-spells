@@ -276,6 +276,16 @@ components:
           example:
             - Daze
             - Magic Missile
+        layout:
+          $ref: '#/components/schemas/SpellCardPdfLayout'
+
+    SpellCardPdfLayout:
+      type: string
+      description: One poker-size card per page or up to nine poker-size cards per A4 cut sheet.
+      default: A4_SHEET
+      enum:
+        - A4_SHEET
+        - PLAYING_CARD
 
     SpellCardJobStatus:
       type: string
