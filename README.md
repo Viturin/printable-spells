@@ -109,17 +109,9 @@ docker compose -p spellcards-staging -f docker-compose.yml -f docker-compose.sta
 
 ## CI Deploy Flow
 
-- Workflow: `.github/workflows/deploy.yml`
-- Trigger: push to `main` (and manual run).
-- Runner: self-hosted Linux runner.
-- Flow:
-  1. Deploy staging (`spellcards-staging`)
-  2. Deploy prod (`spellcards-prod`)
+On a push to `main`, `.github/workflows/deploy.yml` publishes the images and dispatches staging to `homelab-ops`. It waits for that deployment and its homepage and spell-search checks to pass. The `production` environment then requests reviewer approval before dispatching the same image tag to production.
 
-To require manual approval before prod:
-1. GitHub repository `Settings` -> `Environments` -> `production`
-2. Add required reviewers
-3. Keep workflow environment name as `production`
+`HOMELAB_OPS_DISPATCH_TOKEN` needs **Contents: Read and write** and **Actions: Read-only** for `Viturin/homelab-ops`. The manual `production` target can promote an already-verified image or roll back directly, with the same reviewer approval.
 
 ## What This Tool Does
 

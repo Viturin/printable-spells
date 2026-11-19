@@ -95,19 +95,19 @@ jobs:
             ghcr.io/${{ needs.resolve-image.outputs.ghcr_owner }}/spellcards-worker:latest
 
   dispatch-staging:
-    name: Dispatch Staging Deploy
+    name: Deploy and Verify Staging
     needs:
       - resolve-image
       - build-and-push
     runs-on: ubuntu-latest
-    if: >
+    timeout-minutes: 12
+    env:
+      REQUEST_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+    if: >-
+      !cancelled() &&
+      needs.resolve-image.result == 'success' &&
       (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
-      github.event_name == 'push' ||
-      (
-      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.deploy_target == 'staging' || inputs.deploy_target == 'both'))
-      )
+      (github.event_name == 'push' || inputs.deploy_target == 'staging' || inputs.deploy_target == 'both')
     steps:
       - uses: peter-evans/repository-dispatch@v4
         with:
@@ -118,8 +118,36 @@ jobs:
             {
               "stack": "spellcards",
               "environment": "staging",
+              "request_id": "${{ env.REQUEST_ID }}",
               "env_lines": "APP_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWEB_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}\nWORKER_IMAGE_TAG=${{ needs.resolve-image.outputs.image_tag }}"
             }
+
+      - name: Wait for the matching homelab deploy
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.HOMELAB_OPS_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          workflow_runs='repos/Viturin/homelab-ops/actions/workflows/deploy.yml/runs'
+          run_title="Spell Cards staging $REQUEST_ID"
+          for ((attempt = 1; attempt <= 60; attempt++)); do
+            if ! run="$(gh api --method GET "$workflow_runs" -f event=repository_dispatch -f per_page=50 |
+              jq -c --arg title "$run_title" '.workflow_runs[] | select(.display_title == $title)')"; then
+              echo "Could not read homelab workflow runs. Check Actions read access on HOMELAB_OPS_DISPATCH_TOKEN." >&2
+              exit 1
+            fi
+            if [[ -n "$run" ]] && jq -e '.status == "completed"' <<< "$run" > /dev/null; then
+              jq -r '.html_url' <<< "$run"
+              if jq -e '.conclusion == "success"' <<< "$run" > /dev/null; then
+                exit 0
+              fi
+              echo "Staging deployment failed its checks or did not complete successfully." >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for the staging deployment $REQUEST_ID." >&2
+          exit 1
 
   dispatch-production:
     name: Dispatch Production Deploy
@@ -128,22 +156,14 @@ jobs:
       - build-and-push
       - dispatch-staging
     runs-on: ubuntu-latest
-    if: >
+    if: >-
+      !cancelled() &&
+      needs.resolve-image.result == 'success' &&
+      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped') &&
       (
-      github.event_name == 'push' &&
-      needs.dispatch-staging.result == 'success' &&
-      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
-      ) ||
-      (
-      github.event_name == 'workflow_dispatch' &&
-      inputs.deploy_target == 'both' &&
-      needs.dispatch-staging.result == 'success' &&
-      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
-      ) ||
-      (
-      github.event_name == 'workflow_dispatch' &&
-      inputs.deploy_target == 'production' &&
-      (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+        ((github.event_name == 'push' || inputs.deploy_target == 'both') &&
+          needs.dispatch-staging.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'production')
       )
     environment:
       name: production
