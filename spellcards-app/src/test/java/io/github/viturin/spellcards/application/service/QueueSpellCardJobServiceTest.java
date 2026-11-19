@@ -1,25 +1,43 @@
 package io.github.viturin.spellcards.application.service;
 
+import io.github.viturin.spellcards.adapters.out.filesystem.FileSpellCardJobStore;
+import io.github.viturin.spellcards.application.model.SpellCardJobStatus;
+import io.github.viturin.spellcards.application.port.out.SpellCardJobPublicationException;
 import io.github.viturin.spellcards.application.port.out.SpellCardJobPublisher;
 import io.github.viturin.spellcards.queue.model.SpellCardJobMessage;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class QueueSpellCardJobServiceTest {
+    @TempDir
+    Path artifactDirectory;
 
     @Test
-    void returnsUuidAndPublishesNormalizedMessage() {
+    void persistsNormalizedJobBeforePublishing() {
+        FileSpellCardJobStore jobStore = new FileSpellCardJobStore(artifactDirectory, 24);
         SpellCardJobPublisher publisher = mock(SpellCardJobPublisher.class);
-        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher);
+        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher, jobStore);
+        doAnswer(invocation -> {
+            SpellCardJobMessage message = invocation.getArgument(0);
+            var stored = new FileSpellCardJobStore(artifactDirectory, 24).find(message.jobId()).orElseThrow();
+            assertEquals(SpellCardJobStatus.QUEUED, stored.status());
+            assertEquals(message.spellNames(), stored.spellNames());
+            return null;
+        }).when(publisher).publish(any());
 
         UUID jobId = service.submit(List.of(" Daze ", "Magic Missile", "Daze", "  "));
 
@@ -34,9 +52,32 @@ class QueueSpellCardJobServiceTest {
     @Test
     void throwsForEmptyPayloadAndDoesNotPublish() {
         SpellCardJobPublisher publisher = mock(SpellCardJobPublisher.class);
-        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher);
+        FileSpellCardJobStore jobStore = new FileSpellCardJobStore(artifactDirectory, 24);
+        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher, jobStore);
 
         assertThrows(IllegalArgumentException.class, () -> service.submit(List.of("  ", "")));
-        verify(publisher, never()).publish(org.mockito.ArgumentMatchers.any());
+        verify(publisher, never()).publish(any());
+    }
+
+    @Test
+    void definiteRejectionMarksThePersistedJobFailed() {
+        verifyFailedPublication(true, SpellCardJobStatus.FAILED);
+    }
+
+    @Test
+    void uncertainPublicationLeavesJobAvailableToWorker() {
+        verifyFailedPublication(false, SpellCardJobStatus.QUEUED);
+    }
+
+    private void verifyFailedPublication(boolean rejected, SpellCardJobStatus expectedStatus) {
+        FileSpellCardJobStore jobStore = new FileSpellCardJobStore(artifactDirectory, 24);
+        SpellCardJobPublisher publisher = mock(SpellCardJobPublisher.class);
+        doThrow(new SpellCardJobPublicationException(rejected, null)).when(publisher).publish(any());
+        QueueSpellCardJobService service = new QueueSpellCardJobService(publisher, jobStore);
+        assertThrows(SpellCardJobPublicationException.class, () -> service.submit(List.of("Daze")));
+
+        ArgumentCaptor<SpellCardJobMessage> captor = ArgumentCaptor.forClass(SpellCardJobMessage.class);
+        verify(publisher).publish(captor.capture());
+        assertEquals(expectedStatus, jobStore.find(captor.getValue().jobId()).orElseThrow().status());
     }
 }

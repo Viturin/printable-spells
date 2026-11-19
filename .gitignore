@@ -12,6 +12,7 @@
 /.m2/
 /.tmp/
 /.cache/
+/runtime/
 
 # IDE
 /.idea/

@@ -1,5 +1,6 @@
 package io.github.viturin.spellcards.adapters.in.rest;
 
+import io.github.viturin.spellcards.application.port.out.SpellCardJobPublicationException;
 import io.github.viturin.spellcards.generated.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,12 @@ import java.util.List;
 
 @RestControllerAdvice
 public class RestExceptionHandler {
+    @ExceptionHandler(SpellCardJobPublicationException.class)
+    public ResponseEntity<ErrorResponse> handleJobPublicationFailure(SpellCardJobPublicationException exception) {
+        ErrorResponse response = new ErrorResponse("JOB_QUEUE_UNAVAILABLE", exception.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         ErrorResponse response = new ErrorResponse("INVALID_ARGUMENT", ex.getMessage());
