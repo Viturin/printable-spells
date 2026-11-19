@@ -128,3 +128,5 @@ On a push to `main`, `.github/workflows/deploy.yml` publishes the images and dis
 - Provides a frontend for live spell search and card-oriented output.
 
 Select spells, choose **A4 cut sheets** or **Playing-card pages**, then click **Generate PDF**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets hold up to nine cards and include cut guides. Print at **Actual size** or **100%** to preserve the dimensions. The browser attempts a download when the PDF is ready and keeps a **Download PDF** link available.
+
+On the cards, ◆ marks one action, ◇ marks a free action, and ↶ marks a reaction. Longer casting times are written out. Long spell descriptions continue on numbered cards.

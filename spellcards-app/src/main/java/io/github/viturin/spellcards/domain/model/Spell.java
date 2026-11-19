@@ -25,6 +25,11 @@ public interface Spell {
     }
 
     @Value.Default
+    default SpellCastingDetails castingDetails() {
+        return SpellCastingDetails.EMPTY;
+    }
+
+    @Value.Default
     default String range() {
         return "";
     }
