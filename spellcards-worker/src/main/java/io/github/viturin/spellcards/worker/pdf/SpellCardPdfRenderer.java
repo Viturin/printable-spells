@@ -9,6 +9,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
@@ -16,6 +17,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class SpellCardPdfRenderer {
@@ -31,6 +34,11 @@ public class SpellCardPdfRenderer {
     private static final float BADGE_WIDTH = 43;
     private static final float BADGE_HEIGHT = 21;
     private static final float CONTINUATION_SPACE = 11;
+    private static final float DIE_SIZE = 14;
+    private static final float DIE_SLOT = 23;
+    private static final float DICE_ROW_HEIGHT = 16;
+    private static final int DICE_PER_ROW = (int) (LINE_WIDTH / DIE_SLOT);
+    private static final List<String> ILLUSTRATED_DICE = List.of("d4", "d6", "d8", "d10", "d12", "d20");
     private static final float BODY_INSET = 4;
     private static final float MAX_WORD_SPACE_INCREASE = 0.65f;
     private static final Color FRAME_COLOR = new Color(0x262c30);
@@ -66,7 +74,11 @@ public class SpellCardPdfRenderer {
             case RITUAL -> RITUAL_ACCENT;
         };
         var face = SpellCardFace.from(spell);
-        List<SpellCardFace.Rule> rules = face.rules();
+        List<String> dice = face.rules().stream().filter(rule -> rule.label().equals(SpellCardFace.DICE_HEADER))
+                .flatMap(rule -> java.util.Arrays.stream(rule.value().split(" {2,}")))
+                .map(die -> die.substring(die.lastIndexOf(' ') + 1)).toList();
+        List<SpellCardFace.Rule> rules = face.rules().stream()
+                .filter(rule -> !rule.label().equals(SpellCardFace.DICE_HEADER)).toList();
         List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
 
         int bodyIndex = 0;
@@ -77,9 +89,11 @@ public class SpellCardPdfRenderer {
             String label = part == 1 ? face.classification() : "CONTINUED  ·  PART " + part;
             append(title, spell.name(), bold, 13, PAPER, badge == null ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - 5);
             append(type, label, bold, 7, accent);
+            List<String> headerDice = part == 1 ? dice : List.of();
+            float diceHeight = Math.ceilDiv(headerDice.size(), DICE_PER_ROW) * DICE_ROW_HEIGHT;
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
             float titleBottom = HEADING_TOP - Math.max(titleHeight, badge == null ? 0 : BADGE_HEIGHT) - 3;
-            float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
+            float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - diceHeight - 5;
             float bodyStart = typeBottom - BODY_INSET;
 
             int start = bodyIndex;
@@ -104,11 +118,19 @@ public class SpellCardPdfRenderer {
                 throw new IOException("Spell heading leaves no space for card content.");
             }
             Line footer = hasContinuation ? new Line("Continued on card " + (part + 1), bold, 7, accent) : null;
-            cards.add(new Card(title, type, body.subList(start, bodyIndex), footer, badge, accent, titleBottom, typeBottom));
+            cards.add(new Card(title, type, headerDice, body.subList(start, bodyIndex), footer, badge, accent, titleBottom, typeBottom));
         }
     }
 
     private void addPages(PDDocument document, List<Card> cards, SpellCardPdfLayout layout) throws IOException {
+        Map<String, PDImageXObject> diceImages = new HashMap<>();
+        for (String die : cards.stream().flatMap(card -> card.dice().stream()).distinct().toList()) {
+            if (ILLUSTRATED_DICE.contains(die)) {
+                try (var image = getClass().getResourceAsStream("/dice/" + die + ".png")) {
+                    diceImages.put(die, PDImageXObject.createFromByteArray(document, image.readAllBytes(), die));
+                }
+            }
+        }
         boolean sheet = layout == SpellCardPdfLayout.A4_SHEET;
         float gridLeft = sheet ? (PDRectangle.A4.getWidth() - SHEET_COLUMNS * CARD_WIDTH) / 2 : 0;
         float gridTop = sheet ? (PDRectangle.A4.getHeight() + SHEET_ROWS * CARD_HEIGHT) / 2 : CARD_HEIGHT;
@@ -121,7 +143,7 @@ public class SpellCardPdfRenderer {
                 for (int index = 0; index < count; index++) {
                     float left = gridLeft + index % SHEET_COLUMNS * CARD_WIDTH;
                     float bottom = gridTop - (index / SHEET_COLUMNS + 1) * CARD_HEIGHT;
-                    drawCard(content, cards.get(start + index), left, bottom);
+                    drawCard(content, cards.get(start + index), diceImages, left, bottom);
                 }
                 if (sheet) {
                     drawCutGuides(content, gridLeft, gridTop, count);
@@ -130,7 +152,8 @@ public class SpellCardPdfRenderer {
         }
     }
 
-    private void drawCard(PDPageContentStream content, Card card, float left, float bottom) throws IOException {
+    private void drawCard(PDPageContentStream content, Card card, Map<String, PDImageXObject> diceImages,
+                          float left, float bottom) throws IOException {
         float x = left + PADDING;
         fill(content, FRAME_COLOR, left + 0.75f, bottom + 0.75f, CARD_WIDTH - 1.5f, CARD_HEIGHT - 1.5f);
         fill(content, PAPER, left + FRAME, bottom + FRAME, CARD_WIDTH - 2 * FRAME, CARD_HEIGHT - 2 * FRAME);
@@ -149,6 +172,17 @@ public class SpellCardPdfRenderer {
         y = bottom + card.titleBottom() - 2;
         for (Line line : card.type()) {
             y = drawLine(content, line, x, y);
+        }
+        for (int index = 0; index < card.dice().size(); index++) {
+            String die = card.dice().get(index);
+            float dieX = x + index % DICE_PER_ROW * DIE_SLOT;
+            float dieTop = y - index / DICE_PER_ROW * DICE_ROW_HEIGHT;
+            var image = diceImages.get(die);
+            if (image == null) {
+                drawLine(content, new Line(die, card.type().getFirst().font(), 8, card.accent()), dieX, dieTop);
+            } else {
+                content.drawImage(image, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
+            }
         }
         y = bottom + card.typeBottom() - BODY_INSET;
         for (Line line : card.body()) {
@@ -395,7 +429,7 @@ public class SpellCardPdfRenderer {
         content.showTextWithPositioning(positioned);
     }
 
-    private record Card(List<Line> title, List<Line> type, List<Line> body, Line footer,
+    private record Card(List<Line> title, List<Line> type, List<String> dice, List<Line> body, Line footer,
                         ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
     }
 

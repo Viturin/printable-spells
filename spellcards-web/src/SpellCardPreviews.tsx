@@ -1,5 +1,6 @@
 import type { SpellSummary } from "./generated/client/src/models";
 
+const illustratedDice = new Set(["d4", "d6", "d8", "d10", "d12", "d20"]);
 const diceLabels = new Set(["Caster attack", "Target save", "Effect dice", "Heightening"]);
 
 function SpellCardPreview({ spell }: { spell: SpellSummary }) {
@@ -14,7 +15,8 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
   const rules = preview?.rules ?? fallbackRules.filter(({ value }) => value);
   const traitRule = rules.find(({ label }) => label === "Traits");
   const traits = traitRule?.value?.split(/,\s*/).filter(Boolean) ?? [];
-  const visibleRules = rules.filter(({ label }) => label !== "Traits" && !diceLabels.has(label));
+  const diceHeader = rules.find(({ label }) => label === "Dice needed");
+  const visibleRules = rules.filter(({ label }) => label !== "Traits" && label !== "Dice needed" && !diceLabels.has(label));
   const dice = rules.filter(({ label }) => diceLabels.has(label));
 
   return (
@@ -31,6 +33,20 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
       <p className="cardFaceType">
         {preview?.classification ?? [spell.kind, "Rank " + spell.level, spell.rarity].join(" · ")}
       </p>
+      {diceHeader?.value ? (
+        <ul className="cardFaceDiceHeader" aria-label="Dice needed">
+          {diceHeader.value.split(/ {2,}/).map((die) => {
+            const [symbol, label] = die.split(" ");
+            return (
+              <li key={label}>
+                {illustratedDice.has(label)
+                  ? <img src={import.meta.env.BASE_URL + "dice/" + label + ".png"} alt={label} width={20} height={20} />
+                  : <><span aria-hidden="true">{symbol}</span> {label}</>}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <div className="cardFaceContent">
         {visibleRules.length > 0 ? (
           <dl className="cardFaceRules">
