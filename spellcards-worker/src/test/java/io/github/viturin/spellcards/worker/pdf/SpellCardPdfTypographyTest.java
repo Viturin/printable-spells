@@ -68,6 +68,7 @@ class SpellCardPdfTypographyTest {
             String text = new PDFTextStripper().getText(document);
             assertTrue(text.contains("↔ 60 feet"), text);
             assertTrue(text.contains("▦ 20-foot burst"), text);
+            assertTrue(text.contains("◎ 1 creature"), text);
             assertTrue(text.contains("⬟ Basic Reflex"), text);
             assertTrue(text.contains("✦ arcane, occult"), text);
             assertTrue(text.contains("fire"), text);

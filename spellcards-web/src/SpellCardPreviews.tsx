@@ -8,7 +8,7 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
   const fallbackRules = [
     { label: "Cast", value: spell.actionCost },
     { label: "Range", value: spell.range, symbol: "↔" },
-    { label: "Targets", value: spell.target },
+    { label: "Targets", value: spell.target, symbol: "◎" },
     { label: "Traditions", value: spell.traditions.join(", "), symbol: "✦" },
     { label: "Traits", value: spell.traits.filter((trait) => trait.toLowerCase() !== "cantrip").join(", ") },
   ];

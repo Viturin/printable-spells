@@ -88,6 +88,7 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         return switch (label) {
             case "Range" -> "↔";
             case "Area" -> "▦";
+            case "Targets" -> "◎";
             case "Defense" -> "⬟";
             case "Traditions" -> "✦";
             default -> "";
