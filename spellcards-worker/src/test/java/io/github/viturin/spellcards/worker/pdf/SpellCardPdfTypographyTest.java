@@ -2,6 +2,7 @@ package io.github.viturin.spellcards.worker.pdf;
 
 import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
+import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SpellCardPdfTypographyTest {
@@ -44,6 +46,30 @@ class SpellCardPdfTypographyTest {
             var finalLine = text.lines.stream().filter(line -> line.text.equals("Final line.")).findFirst().orElseThrow();
             assertEquals(left, finalLine.left, 0.1);
             assertTrue(finalLine.right < left + 75);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SpellCardPdfLayout.class)
+    void printsRuleSymbolsAndIndividualTraitChipsInGrayscaleLayouts(SpellCardPdfLayout layout) throws Exception {
+        var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(1)
+                .range("60 feet").target("1 creature").traditions(List.of("arcane", "occult"))
+                .traits(List.of("fire", "concentrate", "manipulate"))
+                .castingDetails(new SpellCastingDetails("20-foot burst", "Basic Reflex", "", "", "", "", "", ""))
+                .description("A concise effect.").build();
+        var output = new ByteArrayOutputStream();
+        new SpellCardPdfRenderer().render(List.of(spell), layout, output);
+
+        try (var document = Loader.loadPDF(output.toByteArray())) {
+            String text = new PDFTextStripper().getText(document);
+            assertTrue(text.contains("↔ 60 feet"), text);
+            assertTrue(text.contains("▦ 20-foot burst"), text);
+            assertTrue(text.contains("⬟ Basic Reflex"), text);
+            assertTrue(text.contains("✦ arcane, occult"), text);
+            assertTrue(text.contains("fire"), text);
+            assertTrue(text.contains("concentrate"), text);
+            assertTrue(text.contains("manipulate"), text);
+            assertFalse(text.contains("Traits:"), text);
         }
     }
 

@@ -516,8 +516,16 @@ details[open] .disclosureIcon {
 .cardFaceRules {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 2px 8px;
   color: #534843;
+}
+
+.cardFaceRule {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: 100%;
 }
 
 .cardFaceRules dt,
@@ -526,11 +534,50 @@ details[open] .disclosureIcon {
 }
 
 .cardFaceRules dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
   font-weight: 650;
 }
 
-.cardFaceRules dt::after {
-  content: ":";
+.cardFaceRules dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardFaceRuleSymbol {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.2em;
+  height: 1.2em;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8em;
+  line-height: 1;
+}
+
+.cardFaceTraits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cardFaceTraits li {
+  padding: 1px 4px;
+  border: 1px solid #887b70;
+  border-radius: 3px;
+  background: #f4eee3;
+  color: #352f2b;
+  font-size: 0.62rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-transform: uppercase;
 }
 
 .cardFaceRules + .cardFaceDescription {

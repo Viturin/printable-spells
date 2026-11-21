@@ -304,6 +304,9 @@ components:
       type: object
       required: [label, value]
       properties:
+        symbol:
+          type: string
+          description: Compact monochrome symbol that identifies this card rule.
         label:
           type: string
         value:

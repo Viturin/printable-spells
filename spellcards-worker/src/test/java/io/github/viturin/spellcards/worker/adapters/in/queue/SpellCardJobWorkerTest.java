@@ -152,8 +152,8 @@ class SpellCardJobWorkerTest {
             String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
             assertTrue(text.contains(expectedCast), text);
             assertTrue(text.contains("RANK 3"), text);
-            assertTrue(text.contains("Area: 20-foot burst"), text);
-            assertTrue(text.contains("Defense: Basic Reflex"), text);
+            assertTrue(text.contains("▦ 20-foot burst"), text);
+            assertTrue(text.contains("⬟ Basic Reflex"), text);
             assertTrue(text.contains("Cost: 1 gp"), text);
             assertTrue(text.contains("Heightened (+1)"), text);
         }

@@ -47,8 +47,18 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
 
     private static void addRule(List<Rule> rules, String label, String value) {
         if (!value.isBlank()) {
-            rules.add(new Rule(label, value));
+            rules.add(new Rule(label, value, ruleSymbol(label)));
         }
+    }
+
+    private static String ruleSymbol(String label) {
+        return switch (label) {
+            case "Range" -> "↔";
+            case "Area" -> "▦";
+            case "Defense" -> "⬟";
+            case "Traditions" -> "✦";
+            default -> "";
+        };
     }
 
     private static Optional<ActionBadge> actionBadge(String actionCost) {
@@ -69,7 +79,7 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         };
     }
 
-    public record Rule(String label, String value) {
+    public record Rule(String label, String value, String symbol) {
     }
 
     public record ActionBadge(String symbols, String caption) {

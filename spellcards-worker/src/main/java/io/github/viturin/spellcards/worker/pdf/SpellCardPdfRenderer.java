@@ -66,7 +66,7 @@ public class SpellCardPdfRenderer {
             case RITUAL -> RITUAL_ACCENT;
         };
         var face = SpellCardFace.from(spell);
-        List<String> rules = face.rules().stream().map(rule -> rule.label() + ": " + rule.value()).toList();
+        List<SpellCardFace.Rule> rules = face.rules();
         List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
 
         int bodyIndex = 0;
@@ -181,14 +181,19 @@ public class SpellCardPdfRenderer {
         content.stroke();
     }
 
-    private List<Line> bodyLines(List<String> rules, String description, PDType0Font regular, float size)
+    private List<Line> bodyLines(List<SpellCardFace.Rule> rules, String description, PDType0Font regular, float size)
             throws IOException {
         List<Line> lines = new ArrayList<>();
         float ruleSize = size - 0.7f;
         for (int index = 0; index < rules.size(); index++) {
-            String row = rules.get(index);
-            if (index + 1 < rules.size()) {
-                String pair = row + "   ·   " + rules.get(index + 1);
+            var rule = rules.get(index);
+            if (rule.label().equals("Traits")) {
+                appendTraitChipRows(lines, rule.value(), regular, ruleSize);
+                continue;
+            }
+            String row = formatRule(rule);
+            if (index + 1 < rules.size() && !rules.get(index + 1).label().equals("Traits")) {
+                String pair = row + "   ·   " + formatRule(rules.get(index + 1));
                 if (!pair.contains("\n") && width(regular, ruleSize, printableText(pair, regular)) <= LINE_WIDTH) {
                     row = pair;
                     index++;
@@ -211,6 +216,36 @@ public class SpellCardPdfRenderer {
             }
         }
         return lines;
+    }
+
+    private String formatRule(SpellCardFace.Rule rule) {
+        String prefix = rule.symbol().isBlank() ? rule.label() + ":" : rule.symbol();
+        return prefix + " " + rule.value();
+    }
+
+    private void appendTraitChipRows(List<Line> lines, String traits, PDType0Font font, float fontSize)
+            throws IOException {
+        List<String> row = new ArrayList<>();
+        float rowWidth = 0;
+        for (String value : traits.split(",")) {
+            String trait = printableText(value.strip(), font);
+            if (trait.isEmpty()) {
+                continue;
+            }
+            float chipWidth = width(font, fontSize, trait) + 6;
+            float nextWidth = row.isEmpty() ? chipWidth : rowWidth + 3 + chipWidth;
+            if (!row.isEmpty() && nextWidth > LINE_WIDTH) {
+                lines.add(Line.chipRow(font, fontSize, MUTED, row));
+                row.clear();
+                rowWidth = 0;
+                nextWidth = chipWidth;
+            }
+            row.add(trait);
+            rowWidth = nextWidth;
+        }
+        if (!row.isEmpty()) {
+            lines.add(Line.chipRow(font, fontSize, MUTED, row));
+        }
     }
 
     private void drawBadge(PDPageContentStream content, Card card, float left, float top) throws IOException {
@@ -308,6 +343,10 @@ public class SpellCardPdfRenderer {
     }
 
     private float drawLine(PDPageContentStream content, Line line, float x, float top) throws IOException {
+        if (!line.chips().isEmpty()) {
+            drawTraitChips(content, line, x, top);
+            return top - line.height();
+        }
         if (!line.text().isEmpty()) {
             content.beginText();
             content.setFont(line.font(), line.fontSize());
@@ -321,6 +360,26 @@ public class SpellCardPdfRenderer {
             content.endText();
         }
         return top - line.height();
+    }
+
+    private void drawTraitChips(PDPageContentStream content, Line line, float x, float top) throws IOException {
+        float height = line.fontSize() + 2;
+        float y = top - height;
+        for (String trait : line.chips()) {
+            float width = width(line.font(), line.fontSize(), trait) + 6;
+            fill(content, TYPE_STRIP, x, y, width, height);
+            content.setStrokingColor(MUTED);
+            content.setLineWidth(0.45f);
+            content.addRect(x, y, width, height);
+            content.stroke();
+            content.beginText();
+            content.setFont(line.font(), line.fontSize());
+            content.setNonStrokingColor(line.color());
+            content.newLineAtOffset(x + 3, y + 1.3f);
+            content.showText(trait);
+            content.endText();
+            x += width + 3;
+        }
     }
 
     private void showJustifiedText(PDPageContentStream content, Line line) throws IOException {
@@ -343,7 +402,8 @@ public class SpellCardPdfRenderer {
     private enum LineStyle {
         DEFAULT(2.3f, false),
         COMPACT(1.6f, false),
-        PARAGRAPH(1.6f, true);
+        PARAGRAPH(1.6f, true),
+        CHIPS(4f, false);
 
         private final float leading;
         private final boolean justify;
@@ -355,9 +415,18 @@ public class SpellCardPdfRenderer {
     }
 
     private record Line(String text, PDType0Font font, float fontSize, Color color, LineStyle style,
-                        float extraWordSpace) {
+                        float extraWordSpace, List<String> chips) {
         private Line(String text, PDType0Font font, float fontSize, Color color) {
-            this(text, font, fontSize, color, LineStyle.DEFAULT, 0);
+            this(text, font, fontSize, color, LineStyle.DEFAULT, 0, List.of());
+        }
+
+        private Line(String text, PDType0Font font, float fontSize, Color color, LineStyle style,
+                     float extraWordSpace) {
+            this(text, font, fontSize, color, style, extraWordSpace, List.of());
+        }
+
+        static Line chipRow(PDType0Font font, float fontSize, Color color, List<String> chips) {
+            return new Line("", font, fontSize, color, LineStyle.CHIPS, 0, List.copyOf(chips));
         }
 
         float height() {
