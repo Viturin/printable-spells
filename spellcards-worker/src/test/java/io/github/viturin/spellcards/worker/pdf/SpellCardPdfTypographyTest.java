@@ -26,7 +26,7 @@ class SpellCardPdfTypographyTest {
     @EnumSource(SpellCardPdfLayout.class)
     void justifiesWrappedProseWithinTheCardButLeavesTheLastLineRagged(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(1)
-                .description("glow ".repeat(14) + "\n\nFinal line.")
+                .description("A glowing sphere floats nearby illuminating the room.\n\nFinal line.")
                 .build();
         var output = new ByteArrayOutputStream();
         new SpellCardPdfRenderer().render(List.of(spell), layout, output);
@@ -42,7 +42,10 @@ class SpellCardPdfTypographyTest {
             var text = new PositionedText();
             text.getText(document);
 
-            assertTrue(text.lines.stream().anyMatch(line -> Math.abs(line.right - right) < 1));
+            var wrappedLine = text.lines.stream().filter(line -> line.text.equals("A glowing sphere floats nearby"))
+                    .findFirst().orElseThrow();
+            assertEquals(left, wrappedLine.left, 0.1);
+            assertEquals(right, wrappedLine.right, 1);
             assertTrue(text.lines.stream().allMatch(line -> line.left >= left - 1 && line.right <= right + 1));
             var finalLine = text.lines.stream().filter(line -> line.text.equals("Final line.")).findFirst().orElseThrow();
             assertEquals(left, finalLine.left, 0.1);

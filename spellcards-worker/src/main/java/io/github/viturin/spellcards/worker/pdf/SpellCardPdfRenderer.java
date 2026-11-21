@@ -40,7 +40,8 @@ public class SpellCardPdfRenderer {
     private static final int DICE_PER_ROW = (int) (LINE_WIDTH / DIE_SLOT);
     private static final List<String> ILLUSTRATED_DICE = List.of("d4", "d6", "d8", "d10", "d12", "d20");
     private static final float BODY_INSET = 4;
-    private static final float MAX_WORD_SPACE_INCREASE = 0.65f;
+    // A wrapped line can stretch to twice its normal space width before the gaps get distracting.
+    private static final float MAX_WORD_SPACE_INCREASE = 1f;
     private static final Color FRAME_COLOR = new Color(0x262c30);
     private static final Color PAPER = new Color(0xfffbf3);
     private static final Color TYPE_STRIP = new Color(0xe9ddc5);
@@ -436,7 +437,7 @@ public class SpellCardPdfRenderer {
     private enum LineStyle {
         DEFAULT(2.3f, false),
         COMPACT(1.6f, false),
-        PARAGRAPH(1.6f, true),
+        PARAGRAPH(1.2f, true),
         CHIPS(4f, false);
 
         private final float leading;
