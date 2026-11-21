@@ -34,7 +34,9 @@ class SpellsRestControllerTest {
     @Test
     void returnsSpellSummariesAndUnmatchedNamesForBulkImport() throws Exception {
         Spell spell = ImmutableSpell.builder().id("spell-1").name("Daze").level(1).description("Mental damage.")
-                .actionCost("2").castingDetails(new SpellCastingDetails("", "Basic Will", "", "", "", "", "", ""))
+                .actionCost("2").range("60 feet").target("1 creature")
+                .traditions(List.of("arcane", "occult")).traits(List.of("cantrip", "mental", "incapacitation"))
+                .castingDetails(new SpellCastingDetails("20-foot burst", "Basic Will", "", "", "", "", "", ""))
                 .build();
         SpellSearchService service = mock(SpellSearchService.class);
         when(service.resolveNames(List.of("daze", "Unknown"))).thenReturn(new SpellNameResolution(
@@ -51,10 +53,16 @@ class SpellsRestControllerTest {
                 .andExpect(jsonPath("$.items[0].id").value("spell-1"))
                 .andExpect(jsonPath("$.items[0].name").value("Daze"))
                 .andExpect(jsonPath("$.items[0].description").value("Mental damage."))
-                .andExpect(jsonPath("$.items[0].cardPreview.classification").value("SPELL  ·  RANK 1  ·  COMMON"))
+                .andExpect(jsonPath("$.items[0].cardPreview.classification").value("CANTRIP  ·  RANK 1  ·  COMMON"))
                 .andExpect(jsonPath("$.items[0].cardPreview.action.symbols").value("◆◆"))
-                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].label").value("Defense"))
-                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].value").value("Basic Will"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].label").value("Range"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].symbol").value("↔"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].value").value("60 feet"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[1].symbol").value("▦"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[3].symbol").value("⬟"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[4].symbol").value("✦"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[5].label").value("Traits"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[5].value").value("mental, incapacitation"))
                 .andExpect(jsonPath("$.unmatchedNames[0]").value("Unknown"));
     }
 

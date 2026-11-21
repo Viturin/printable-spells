@@ -4,12 +4,15 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
   const preview = spell.cardPreview;
   const fallbackRules = [
     { label: "Cast", value: spell.actionCost },
-    { label: "Range", value: spell.range },
+    { label: "Range", value: spell.range, symbol: "↔" },
     { label: "Targets", value: spell.target },
-    { label: "Traditions", value: spell.traditions.join(", ") },
-    { label: "Traits", value: spell.traits.join(", ") },
+    { label: "Traditions", value: spell.traditions.join(", "), symbol: "✦" },
+    { label: "Traits", value: spell.traits.filter((trait) => trait.toLowerCase() !== "cantrip").join(", ") },
   ];
   const rules = preview?.rules ?? fallbackRules.filter(({ value }) => value);
+  const traitRule = rules.find(({ label }) => label === "Traits");
+  const traits = traitRule?.value?.split(/,\s*/).filter(Boolean) ?? [];
+  const visibleRules = rules.filter(({ label }) => label !== "Traits");
 
   return (
     <article className="cardFace" data-kind={spell.kind}>
@@ -26,14 +29,23 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
         {preview?.classification ?? [spell.kind, "Rank " + spell.level, spell.rarity].join(" · ")}
       </p>
       <div className="cardFaceContent">
-        {rules.length > 0 ? (
+        {visibleRules.length > 0 ? (
           <dl className="cardFaceRules">
-            {rules.map(({ label, value }) => (
-              <div key={label}>
-                <dt>{label}</dt>{" "}<dd>{value}</dd>
+            {visibleRules.map(({ label, value, symbol }) => (
+              <div className="cardFaceRule" key={label}>
+                <dt>
+                  {symbol ? <span className="cardFaceRuleSymbol" aria-hidden="true">{symbol}</span> : null}
+                  {label}
+                </dt>
+                <dd>{value}</dd>
               </div>
             ))}
           </dl>
+        ) : null}
+        {traits.length > 0 ? (
+          <ul className="cardFaceTraits" aria-label="Spell traits">
+            {traits.map((trait) => <li key={trait}>{trait}</li>)}
+          </ul>
         ) : null}
         {spell.description ? (
           <div className="cardFaceDescription">

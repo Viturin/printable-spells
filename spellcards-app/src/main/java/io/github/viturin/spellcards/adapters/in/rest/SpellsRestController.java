@@ -67,7 +67,11 @@ public class SpellsRestController implements SpellsApi {
         summary.setDescription(spell.description());
         var face = SpellCardFace.from(spell);
         var preview = new SpellCardPreview(face.classification(),
-                face.rules().stream().map(rule -> new SpellCardRule(rule.label(), rule.value())).toList());
+                face.rules().stream().map(rule -> {
+                    var cardRule = new SpellCardRule(rule.label(), rule.value());
+                    cardRule.setSymbol(rule.symbol());
+                    return cardRule;
+                }).toList());
         face.badge().ifPresent(badge -> preview.setAction(new SpellCardActionBadge(badge.symbols(), badge.caption())));
         summary.setCardPreview(preview);
         return summary;
