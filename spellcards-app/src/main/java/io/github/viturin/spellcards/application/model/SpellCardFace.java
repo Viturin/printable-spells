@@ -2,14 +2,19 @@ package io.github.viturin.spellcards.application.model;
 
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.domain.model.SpellKind;
+import io.github.viturin.spellcards.domain.model.SpellDice;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 public record SpellCardFace(String classification, Optional<ActionBadge> badge, List<Rule> rules) {
+    public static final String DICE_HEADER = "Dice needed";
+    private static final Pattern DIE = Pattern.compile("(?i)d(\\d{1,3})\\b");
     private static final Pattern VARIABLE_ACTIONS = Pattern.compile("([1-3]) (to|or) ([1-3])");
 
     public static SpellCardFace from(Spell spell) {
@@ -38,6 +43,7 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         addRule(rules, "Traits", String.join(", ", spell.traits().stream().filter(trait -> !trait.equals("cantrip")).toList()));
 
         var dice = spell.dice();
+        addRule(rules, DICE_HEADER, diceHeader(dice));
         addRule(rules, "Caster attack", dice.attack());
         addRule(rules, "Target save", dice.save());
         addRule(rules, "Effect dice", dice.effect());
@@ -49,6 +55,27 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         }
         String classification = kind + "  ·  RANK " + spell.level() + "  ·  " + spell.rarity().toUpperCase(Locale.ROOT);
         return new SpellCardFace(classification, badge, List.copyOf(rules));
+    }
+
+    private static String diceHeader(SpellDice dice) {
+        var sides = new TreeSet<Integer>();
+        for (String roll : List.of(dice.attack(), dice.save(), dice.effect(), dice.heightening())) {
+            var matcher = DIE.matcher(roll);
+            while (matcher.find()) {
+                sides.add(Integer.parseInt(matcher.group(1)));
+            }
+        }
+        return sides.stream().map(count -> dieSymbol(count) + " d" + count).collect(Collectors.joining("   "));
+    }
+
+    private static String dieSymbol(int sides) {
+        return switch (sides) {
+            case 4 -> "△";
+            case 6 -> "□";
+            case 8 -> "◇";
+            case 10 -> "⬟";
+            default -> "⬡";
+        };
     }
 
     private static void addRule(List<Rule> rules, String label, String value) {

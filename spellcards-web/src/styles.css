@@ -507,6 +507,19 @@ details[open] .disclosureIcon {
   text-transform: uppercase;
 }
 
+.cardFaceDiceHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin: 0;
+  padding: 0 9px 5px;
+  list-style: none;
+  background: #e9ddc5;
+  color: var(--card-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .cardFaceContent {
   padding: 7px 8px;
   font-size: 0.8rem;

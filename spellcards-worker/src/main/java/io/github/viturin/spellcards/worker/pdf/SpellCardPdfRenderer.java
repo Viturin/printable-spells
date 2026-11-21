@@ -66,7 +66,9 @@ public class SpellCardPdfRenderer {
             case RITUAL -> RITUAL_ACCENT;
         };
         var face = SpellCardFace.from(spell);
-        List<SpellCardFace.Rule> rules = face.rules();
+        var diceHeader = face.rules().stream().filter(rule -> rule.label().equals(SpellCardFace.DICE_HEADER)).findFirst();
+        List<SpellCardFace.Rule> rules = face.rules().stream()
+                .filter(rule -> !rule.label().equals(SpellCardFace.DICE_HEADER)).toList();
         List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
 
         int bodyIndex = 0;
@@ -77,6 +79,9 @@ public class SpellCardPdfRenderer {
             String label = part == 1 ? face.classification() : "CONTINUED  ·  PART " + part;
             append(title, spell.name(), bold, 13, PAPER, badge == null ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - 5);
             append(type, label, bold, 7, accent);
+            if (part == 1 && diceHeader.isPresent()) {
+                append(type, diceHeader.orElseThrow().value(), bold, 8, accent);
+            }
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
             float titleBottom = HEADING_TOP - Math.max(titleHeight, badge == null ? 0 : BADGE_HEIGHT) - 3;
             float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
