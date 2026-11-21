@@ -739,6 +739,20 @@ details[open] .disclosureIcon {
   font-weight: 600;
 }
 
+@media (width > 850px) {
+  .pageWithPdf {
+    width: min(100%, 1440px);
+  }
+
+  .pageWithPdf .columns {
+    grid-template-columns: clamp(240px, 24vw, 300px) minmax(0, 1fr);
+  }
+
+  .pageWithPdf .spellKind {
+    display: none;
+  }
+}
+
 @media (max-width: 850px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
