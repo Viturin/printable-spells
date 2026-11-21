@@ -1,11 +1,15 @@
 package io.github.viturin.spellcards.adapters.in.rest;
 
+import io.github.viturin.spellcards.application.model.SpellCardFace;
 import io.github.viturin.spellcards.application.port.in.SearchSpellsResult;
 import io.github.viturin.spellcards.application.port.in.SpellSearchService;
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.generated.api.SpellsApi;
 import io.github.viturin.spellcards.generated.model.ResolveSpellNamesRequest;
 import io.github.viturin.spellcards.generated.model.ResolveSpellNamesResponse;
+import io.github.viturin.spellcards.generated.model.SpellCardActionBadge;
+import io.github.viturin.spellcards.generated.model.SpellCardPreview;
+import io.github.viturin.spellcards.generated.model.SpellCardRule;
 import io.github.viturin.spellcards.generated.model.SpellKind;
 import io.github.viturin.spellcards.generated.model.SpellRarity;
 import io.github.viturin.spellcards.generated.model.SpellSearchResponse;
@@ -61,6 +65,11 @@ public class SpellsRestController implements SpellsApi {
         summary.setRange(spell.range());
         summary.setTarget(spell.target());
         summary.setDescription(spell.description());
+        var face = SpellCardFace.from(spell);
+        var preview = new SpellCardPreview(face.classification(),
+                face.rules().stream().map(rule -> new SpellCardRule(rule.label(), rule.value())).toList());
+        face.badge().ifPresent(badge -> preview.setAction(new SpellCardActionBadge(badge.symbols(), badge.caption())));
+        summary.setCardPreview(preview);
         return summary;
     }
 

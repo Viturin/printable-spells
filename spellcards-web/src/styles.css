@@ -113,7 +113,7 @@ dd {
 
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
   align-items: start;
   gap: 20px;
 }
@@ -356,11 +356,6 @@ details[open] .disclosureIcon {
   border-color: var(--accent);
 }
 
-.removeSpell {
-  background: #f2eee9;
-  color: #594a43;
-}
-
 .spellDetails {
   margin: 0 12px;
   border-top: 1px solid var(--line);
@@ -405,8 +400,126 @@ details[open] .disclosureIcon {
   gap: 10px;
 }
 
-.selectedPanel .spellList {
-  max-height: clamp(200px, 45svh, 440px);
+.previewList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 205px), 1fr));
+  align-items: start;
+  gap: 12px;
+  max-height: clamp(280px, calc(100svh - 25rem), 590px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+}
+
+.previewList li {
+  min-width: 0;
+}
+
+.cardFace {
+  --card-accent: #29484a;
+  aspect-ratio: 5 / 7;
+  border: 3px solid #262c30;
+  border-radius: 7px;
+  background: #fffbf3;
+  overflow-wrap: anywhere;
+}
+
+.cardFace[data-kind="FOCUS"] {
+  --card-accent: #4c3b60;
+}
+
+.cardFace[data-kind="RITUAL"] {
+  --card-accent: #563a29;
+}
+
+.cardFaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 9px;
+  background: var(--card-accent);
+  color: #fffbf3;
+}
+
+.cardFaceHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.cardFaceAction {
+  display: grid;
+  justify-items: center;
+  flex-shrink: 0;
+  padding: 2px 5px;
+  background: #e9ddc5;
+  color: var(--card-accent);
+  font-size: 0.64rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.cardFaceType {
+  padding: 5px 9px;
+  background: #e9ddc5;
+  color: var(--card-accent);
+  font-size: 0.69rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cardFaceContent {
+  padding: 9px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.cardFaceRules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: #534843;
+}
+
+.cardFaceRules dt,
+.cardFaceRules dd {
+  display: inline;
+}
+
+.cardFaceRules dt {
+  font-weight: 650;
+}
+
+.cardFaceRules dt::after {
+  content: ":";
+}
+
+.cardFaceRules + .cardFaceDescription {
+  margin-top: 7px;
+}
+
+.cardFaceDescription {
+  white-space: pre-line;
+}
+
+.previewRemove {
+  display: block;
+  min-height: 36px;
+  margin: 3px 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.previewRemove:hover {
+  background: var(--accent-soft);
 }
 
 .emptyState {
@@ -530,9 +643,12 @@ details[open] .disclosureIcon {
     position: static;
   }
 
-  .spellList,
-  .selectedPanel .spellList {
+  .spellList {
     max-height: clamp(156px, 42svh, 360px);
+  }
+
+  .previewList {
+    max-height: 65svh;
   }
 }
 
