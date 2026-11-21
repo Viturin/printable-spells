@@ -517,7 +517,7 @@ details[open] .disclosureIcon {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 4px 8px;
+  gap: 2px 8px;
   color: #534843;
 }
 
@@ -539,10 +539,6 @@ details[open] .disclosureIcon {
   gap: 3px;
   flex: none;
   font-weight: 650;
-}
-
-.cardFaceRules dt::after {
-  content: ":";
 }
 
 .cardFaceRules dd {

@@ -34,8 +34,7 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
             {visibleRules.map(({ label, value, symbol }) => (
               <div className="cardFaceRule" key={label}>
                 <dt>
-                  {symbol ? <span className="cardFaceRuleSymbol" aria-hidden="true">{symbol}</span> : null}
-                  {label}
+                  {symbol ? <span className="cardFaceRuleSymbol" role="img" aria-label={label} title={label}>{symbol}</span> : label + ":"}
                 </dt>
                 <dd>{value}</dd>
               </div>

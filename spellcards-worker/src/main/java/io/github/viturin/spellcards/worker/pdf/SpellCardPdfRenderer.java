@@ -219,8 +219,8 @@ public class SpellCardPdfRenderer {
     }
 
     private String formatRule(SpellCardFace.Rule rule) {
-        String symbol = rule.symbol().isBlank() ? "" : rule.symbol() + " ";
-        return symbol + rule.label() + ": " + rule.value();
+        String prefix = rule.symbol().isBlank() ? rule.label() + ":" : rule.symbol();
+        return prefix + " " + rule.value();
     }
 
     private void appendTraitChipRows(List<Line> lines, String traits, PDType0Font font, float fontSize)
