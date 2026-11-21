@@ -6,6 +6,7 @@ import io.github.viturin.spellcards.application.port.in.SpellNameResolution;
 import io.github.viturin.spellcards.application.port.in.SpellSearchService;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
 import io.github.viturin.spellcards.domain.model.Spell;
+import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
 import io.github.viturin.spellcards.generated.model.SpellKind;
 import io.github.viturin.spellcards.generated.model.SpellSearchResponse;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,9 @@ class SpellsRestControllerTest {
 
     @Test
     void returnsSpellSummariesAndUnmatchedNamesForBulkImport() throws Exception {
-        Spell spell = ImmutableSpell.builder().id("spell-1").name("Daze").level(1).description("Mental damage.").build();
+        Spell spell = ImmutableSpell.builder().id("spell-1").name("Daze").level(1).description("Mental damage.")
+                .actionCost("2").castingDetails(new SpellCastingDetails("", "Basic Will", "", "", "", "", "", ""))
+                .build();
         SpellSearchService service = mock(SpellSearchService.class);
         when(service.resolveNames(List.of("daze", "Unknown"))).thenReturn(new SpellNameResolution(
                 List.of(spell), List.of("Unknown")
@@ -48,6 +51,10 @@ class SpellsRestControllerTest {
                 .andExpect(jsonPath("$.items[0].id").value("spell-1"))
                 .andExpect(jsonPath("$.items[0].name").value("Daze"))
                 .andExpect(jsonPath("$.items[0].description").value("Mental damage."))
+                .andExpect(jsonPath("$.items[0].cardPreview.classification").value("SPELL  ·  RANK 1  ·  COMMON"))
+                .andExpect(jsonPath("$.items[0].cardPreview.action.symbols").value("◆◆"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].label").value("Defense"))
+                .andExpect(jsonPath("$.items[0].cardPreview.rules[0].value").value("Basic Will"))
                 .andExpect(jsonPath("$.unmatchedNames[0]").value("Unknown"));
     }
 

@@ -1,8 +1,9 @@
 package io.github.viturin.spellcards.worker.pdf;
 
+import io.github.viturin.spellcards.application.model.SpellCardFace;
+import io.github.viturin.spellcards.application.model.SpellCardFace.ActionBadge;
 import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.domain.model.Spell;
-import io.github.viturin.spellcards.domain.model.SpellKind;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -15,8 +16,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.regex.Pattern;
 
 @Component
 public class SpellCardPdfRenderer {
@@ -41,7 +40,6 @@ public class SpellCardPdfRenderer {
     private static final Color SPELL_ACCENT = new Color(0x29484a);
     private static final Color FOCUS_ACCENT = new Color(0x4c3b60);
     private static final Color RITUAL_ACCENT = new Color(0x563a29);
-    private static final Pattern VARIABLE_ACTIONS = Pattern.compile("([1-3]) (to|or) ([1-3])");
 
     public void render(List<Spell> spells, SpellCardPdfLayout layout, OutputStream output) throws IOException {
         try (var document = new PDDocument();
@@ -65,43 +63,16 @@ public class SpellCardPdfRenderer {
             case FOCUS -> FOCUS_ACCENT;
             case RITUAL -> RITUAL_ACCENT;
         };
-        ActionBadge cast = actionBadge(spell.actionCost());
-        List<String> rules = new ArrayList<>();
-        var casting = spell.castingDetails();
-        if (cast == null) {
-            addField(rules, "Cast", spell.actionCost());
-        }
-        addField(rules, "Trigger", casting.trigger());
-        addField(rules, "Requirements", casting.requirements());
-        addField(rules, "Cost", casting.cost());
-        addField(rules, "Range", spell.range());
-        addField(rules, "Area", casting.area());
-        addField(rules, "Targets", spell.target());
-        addField(rules, "Defense", casting.defense());
-        String duration = spell.duration();
-        if (spell.sustained()) {
-            duration = duration.isBlank() ? "Sustained" : duration + " (sustained)";
-        }
-        addField(rules, "Duration", duration);
-        addField(rules, "Primary Check", casting.primaryCheck());
-        addField(rules, "Secondary Checks", casting.secondaryChecks());
-        addField(rules, "Secondary Casters", casting.secondaryCasters());
-        addField(rules, "Traditions", String.join(", ", spell.traditions()));
-        addField(rules, "Traits", String.join(", ", spell.traits().stream().filter(trait -> !trait.equals("cantrip")).toList()));
+        var face = SpellCardFace.from(spell);
+        List<String> rules = face.rules().stream().map(rule -> rule.label() + ": " + rule.value()).toList();
         List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
 
         int bodyIndex = 0;
         for (int part = 1; part == 1 || bodyIndex < body.size(); part++) {
-            ActionBadge badge = part == 1 ? cast : null;
+            ActionBadge badge = part == 1 ? face.badge().orElse(null) : null;
             List<Line> title = new ArrayList<>();
             List<Line> type = new ArrayList<>();
-            String kind = spell.kind().name();
-            if (spell.traits().contains("cantrip")) {
-                kind = spell.kind() == SpellKind.FOCUS ? "FOCUS CANTRIP" : "CANTRIP";
-            }
-            String label = part == 1
-                    ? kind + "  ·  RANK " + spell.level() + "  ·  " + spell.rarity().toUpperCase(Locale.ROOT)
-                    : "CONTINUED  ·  PART " + part;
+            String label = part == 1 ? face.classification() : "CONTINUED  ·  PART " + part;
             append(title, spell.name(), bold, 13, PAPER, badge == null ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - 5);
             append(type, label, bold, 7, accent);
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
@@ -208,12 +179,6 @@ public class SpellCardPdfRenderer {
         content.stroke();
     }
 
-    private void addField(List<String> fields, String name, String value) {
-        if (!value.isBlank()) {
-            fields.add(name + ": " + value);
-        }
-    }
-
     private List<Line> bodyLines(List<String> rules, String description, PDType0Font regular, float size)
             throws IOException {
         List<Line> lines = new ArrayList<>();
@@ -242,24 +207,6 @@ public class SpellCardPdfRenderer {
             }
         }
         return lines;
-    }
-
-    private ActionBadge actionBadge(String actionCost) {
-        String action = actionCost.strip().toLowerCase(Locale.ROOT);
-        return switch (action) {
-            case "1", "2", "3" -> new ActionBadge("◆".repeat(Integer.parseInt(action)), "CAST");
-            case "free", "free action" -> new ActionBadge("◇", "FREE");
-            case "reaction" -> new ActionBadge("↶", "REACTION");
-            default -> {
-                var range = VARIABLE_ACTIONS.matcher(action);
-                if (range.matches()) {
-                    String joiner = range.group(2).equals("or") ? "/" : "–";
-                    yield new ActionBadge("◆".repeat(Integer.parseInt(range.group(1))) + joiner
-                            + "◆".repeat(Integer.parseInt(range.group(3))), "CAST");
-                }
-                yield null;
-            }
-        };
     }
 
     private void drawBadge(PDPageContentStream content, Card card, float left, float top) throws IOException {
@@ -354,9 +301,6 @@ public class SpellCardPdfRenderer {
 
     private record Card(List<Line> title, List<Line> type, List<Line> body, Line footer,
                         ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
-    }
-
-    private record ActionBadge(String symbols, String caption) {
     }
 
     private record Line(String text, PDType0Font font, float fontSize, Color color) {

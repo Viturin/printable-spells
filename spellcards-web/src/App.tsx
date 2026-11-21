@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SpellCardPdfLayout, SpellSummary } from "./generated/client/src/models";
 import { PathbuilderImport } from "./PathbuilderImport";
+import { SpellCardPreviews } from "./SpellCardPreviews";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
 type SpellSearchResponse = {
@@ -16,8 +17,7 @@ type ApiErrorResponse = {
 
 type SpellListProps = {
   spells: SpellSummary[];
-  action: "Add" | "Remove";
-  onAction: (spell: SpellSummary) => void;
+  onAdd: (spell: SpellSummary) => void;
 };
 
 function SpellDetails({ spell }: { spell: SpellSummary }) {
@@ -46,7 +46,7 @@ function SpellDetails({ spell }: { spell: SpellSummary }) {
   );
 }
 
-function SpellList({ spells, action, onAction }: SpellListProps) {
+function SpellList({ spells, onAdd }: SpellListProps) {
   return (
     <ul className="spellList">
       {spells.map((spell) => (
@@ -61,12 +61,12 @@ function SpellList({ spells, action, onAction }: SpellListProps) {
             <SpellDetails spell={spell} />
           </details>
           <button
-            className={`spellAction ${action === "Add" ? "addSpell" : "removeSpell"}`}
+            className="spellAction"
             type="button"
-            aria-label={`${action} ${spell.name}`}
-            onClick={() => onAction(spell)}
+            aria-label={`Add ${spell.name}`}
+            onClick={() => onAdd(spell)}
           >
-            {action}
+            Add
           </button>
         </li>
       ))}
@@ -238,7 +238,7 @@ export function App() {
                 {!query.trim() ? "Enter a spell name to search." : items.length ? "All results are selected." : "No spells found."}
               </p>
             ) : null}
-            {searchableItems.length ? <SpellList spells={searchableItems} action="Add" onAction={addSpell} /> : null}
+            {searchableItems.length ? <SpellList spells={searchableItems} onAdd={addSpell} /> : null}
           </div>
         </section>
 
@@ -253,8 +253,8 @@ export function App() {
           </div>
           <div className="panelBody">
             {selectedSpells.length ? (
-              <SpellList spells={selectedSpells} action="Remove" onAction={(spell) => removeSpell(spell.id)} />
-            ) : <p className="emptyState emptySelection">Add spells from search to build your PDF.</p>}
+              <SpellCardPreviews spells={selectedSpells} onRemove={removeSpell} />
+            ) : <p className="emptyState emptySelection">Add spells to preview your cards here.</p>}
           </div>
           <div className="panelFooter">
             <label className="pdfLayout">

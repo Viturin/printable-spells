@@ -261,6 +261,8 @@ components:
         description:
           type: string
           example: You cloud the target's mind and daze it with a mental jolt.
+        cardPreview:
+          $ref: '#/components/schemas/SpellCardPreview'
         score:
           type: number
           format: double
@@ -268,6 +270,37 @@ components:
           maximum: 1
           description: Normalized fuzzy match score.
           example: 0.97
+
+    SpellCardPreview:
+      type: object
+      required: [classification, rules]
+      properties:
+        classification:
+          type: string
+        action:
+          $ref: '#/components/schemas/SpellCardActionBadge'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpellCardRule'
+
+    SpellCardActionBadge:
+      type: object
+      required: [symbols, caption]
+      properties:
+        symbols:
+          type: string
+        caption:
+          type: string
+
+    SpellCardRule:
+      type: object
+      required: [label, value]
+      properties:
+        label:
+          type: string
+        value:
+          type: string
 
     SpellSearchResponse:
       type: object
