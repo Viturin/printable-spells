@@ -12,8 +12,15 @@ import io.github.viturin.spellcards.domain.model.SpellKind;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class FoundrySpellJsonParser {
+    private static final Pattern DIRECTIVE = Pattern.compile(
+            "@(\\w+)\\[((?:[^\\[\\]\\n]|\\[[^\\]\\n]*])*)](?:\\{([^}\\n]+)})?");
+    private static final Pattern INLINE_ROLL = Pattern.compile(
+            "\\[\\[/(r|roll|gmr|gmroll|act)\\s+((?:[^\\[\\]\\n]|\\[[^\\]\\n]*])+)]](?:\\{([^}\\n]+)})?");
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public Optional<Spell> parseSpell(String jsonText) {
@@ -164,6 +171,58 @@ public class FoundrySpellJsonParser {
         return values;
     }
 
+    private static String directiveText(String original, String kind, String payload, String label) {
+        if (label != null) {
+            return label;
+        }
+        String[] parts = payload.split("\\|");
+        if (parts.length == 0) {
+            return original;
+        }
+        return switch (kind) {
+            case "Damage" -> formulaText(parts[0]);
+            case "Check" -> {
+                String dc = option(parts, "dc:");
+                String type = parts[0].replaceFirst("^type:", "");
+                boolean basic = List.of(parts).contains("basic") || List.of(parts).contains("basic:true");
+                yield (dc.isEmpty() ? "" : "DC " + formulaText(dc) + " ")
+                        + (basic ? "basic " : "") + type
+                        + (type.equals("flat") ? " check" : "");
+            }
+            case "Template" -> {
+                String distance = option(parts, "distance:");
+                yield distance.isEmpty() ? original : distance + "-foot " + parts[0].replaceFirst("^type:", "");
+            }
+            default -> original;
+        };
+    }
+
+    private static String option(String[] parts, String prefix) {
+        for (String part : parts) {
+            if (part.startsWith(prefix)) {
+                return part.substring(prefix.length());
+            }
+        }
+        return "";
+    }
+
+    private static String formulaText(String formula) {
+        return formula.replace("@item.level", "spell rank").replace("@item.rank", "spell rank")
+                .replaceAll("\\[([^]]+)]", " ($1)");
+    }
+
+    private static String foundryText(String text) {
+        String resolved = DIRECTIVE.matcher(text).replaceAll(match -> Matcher.quoteReplacement(
+                directiveText(match.group(), match.group(1), match.group(2), match.group(3))));
+        return INLINE_ROLL.matcher(resolved).replaceAll(match -> {
+            String payload = match.group(2).split("#", 2)[0].strip();
+            String value = match.group(3) != null ? match.group(3)
+                    : match.group(1).equals("act") ? payload.replace('-', ' ')
+                    : formulaText(payload.replaceFirst("^\\{(.*)}$", "$1"));
+            return Matcher.quoteReplacement(value);
+        });
+    }
+
     private String htmlToPlain(String html) {
         if (html.isBlank()) {
             return "";
@@ -171,11 +230,8 @@ public class FoundrySpellJsonParser {
         var body = Jsoup.parseBodyFragment(html.replaceAll("\\R", " ")).body();
         body.select("li").forEach(item -> item.prependText("• "));
         body.select("br, hr, p, li, h1, h2, h3, h4, h5, h6")
-                .forEach(element -> element.after(new TextNode("\n")));
-        return body.wholeText()
-                .replaceAll("@\\w+\\[[^\\]\\n]*]\\{([^}\\n]+)}", "$1")
-                .replaceAll("@Template\\[(?:type:)?(burst|cone|emanation|line)\\|distance:(\\d+)]",
-                        "$2-foot $1")
+                .forEach(element -> element.after(new TextNode(element.normalName().equals("p") ? "\n\n" : "\n")));
+        return foundryText(body.wholeText())
                 .replaceAll("(?U)[^\\S\\n]+", " ").replaceAll(" *\\n *", "\n")
                 .replaceAll("\\n{3,}", "\n\n").strip();
     }
