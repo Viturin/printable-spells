@@ -1,5 +1,6 @@
 package io.github.viturin.spellcards.worker.pdf;
 
+import io.github.viturin.spellcards.adapters.out.foundry.FoundrySpellJsonParser;
 import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
 import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
@@ -70,6 +71,29 @@ class SpellCardPdfTypographyTest {
             assertTrue(text.contains("concentrate"), text);
             assertTrue(text.contains("manipulate"), text);
             assertFalse(text.contains("Traits:"), text);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SpellCardPdfLayout.class)
+    void rendersFoundryDescriptionAsReadableText(SpellCardPdfLayout layout) throws Exception {
+        var spell = new FoundrySpellJsonParser().parseSpell("""
+                {"_id":"example","name":"Example Spell","type":"spell","system":{
+                  "level":{"value":3},
+                  "description":{"value":"<p>Deal @Damage[3d8[mental]].</p><ul><li>Attempt a @Check[flat|dc:11|showDC:all].</li><li>Apply @UUID[example]{Stunned 1}.</li></ul><p>Heightened (+1) Add [[/r 1d8]].</p>"}
+                }}
+                """).orElseThrow();
+        assertEquals("Deal 3d8 (mental).\n\n• Attempt a DC 11 flat check.\n• Apply Stunned 1.\nHeightened (+1) Add 1d8.",
+                spell.description());
+
+        var output = new ByteArrayOutputStream();
+        new SpellCardPdfRenderer().render(List.of(spell), layout, output);
+        try (var document = Loader.loadPDF(output.toByteArray())) {
+            String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
+            assertTrue(text.contains("Deal 3d8 (mental)."), text);
+            assertTrue(text.contains("• Attempt a DC 11 flat check."), text);
+            assertTrue(text.contains("• Apply Stunned 1."), text);
+            assertTrue(text.contains("Heightened (+1) Add 1d8."), text);
         }
     }
 
