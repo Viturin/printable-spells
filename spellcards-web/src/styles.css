@@ -584,6 +584,23 @@ details[open] .disclosureIcon {
   margin-top: 5px;
 }
 
+.cardFaceDice {
+  margin-block: 5px;
+  padding: 4px 6px;
+  border-inline-start: 2px solid var(--card-accent);
+  background: #f4eee3;
+  font-size: 0.75rem;
+}
+
+.cardFaceDice dt,
+.cardFaceDice dd {
+  display: inline;
+}
+
+.cardFaceDice dt {
+  font-weight: 650;
+}
+
 .cardFaceDescription {
   display: grid;
   gap: 4px;
