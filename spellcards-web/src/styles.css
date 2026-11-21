@@ -508,9 +508,9 @@ details[open] .disclosureIcon {
 }
 
 .cardFaceContent {
-  padding: 9px;
+  padding: 7px 8px;
   font-size: 0.8rem;
-  line-height: 1.4;
+  line-height: 1.32;
 }
 
 .cardFaceRules {
@@ -534,10 +534,16 @@ details[open] .disclosureIcon {
 }
 
 .cardFaceRules + .cardFaceDescription {
-  margin-top: 7px;
+  margin-top: 5px;
 }
 
 .cardFaceDescription {
+  display: grid;
+  gap: 4px;
+  hyphens: auto;
+  text-align: justify;
+  text-align-last: start;
+  text-justify: inter-word;
   white-space: pre-line;
 }
 

@@ -35,7 +35,13 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
             ))}
           </dl>
         ) : null}
-        {spell.description ? <p className="cardFaceDescription">{spell.description}</p> : null}
+        {spell.description ? (
+          <div className="cardFaceDescription">
+            {spell.description.split(/\n{2,}/).map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   );

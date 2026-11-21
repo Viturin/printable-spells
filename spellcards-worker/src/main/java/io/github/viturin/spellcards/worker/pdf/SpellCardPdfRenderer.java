@@ -25,12 +25,14 @@ public class SpellCardPdfRenderer {
     private static final int SHEET_COLUMNS = 3;
     private static final int SHEET_ROWS = 3;
     private static final float FRAME = 3;
-    private static final float PADDING = 8;
+    private static final float PADDING = 7;
     private static final float HEADING_TOP = CARD_HEIGHT - 7;
     private static final float LINE_WIDTH = CARD_WIDTH - 2 * PADDING;
     private static final float BADGE_WIDTH = 43;
     private static final float BADGE_HEIGHT = 21;
     private static final float CONTINUATION_SPACE = 11;
+    private static final float BODY_INSET = 4;
+    private static final float MAX_WORD_SPACE_INCREASE = 0.65f;
     private static final Color FRAME_COLOR = new Color(0x262c30);
     private static final Color PAPER = new Color(0xfffbf3);
     private static final Color TYPE_STRIP = new Color(0xe9ddc5);
@@ -78,7 +80,7 @@ public class SpellCardPdfRenderer {
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
             float titleBottom = HEADING_TOP - Math.max(titleHeight, badge == null ? 0 : BADGE_HEIGHT) - 3;
             float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
-            float bodyStart = typeBottom - 5;
+            float bodyStart = typeBottom - BODY_INSET;
 
             int start = bodyIndex;
             float remaining = bodyStart - PADDING;
@@ -148,7 +150,7 @@ public class SpellCardPdfRenderer {
         for (Line line : card.type()) {
             y = drawLine(content, line, x, y);
         }
-        y = bottom + card.typeBottom() - 5;
+        y = bottom + card.typeBottom() - BODY_INSET;
         for (Line line : card.body()) {
             y = drawLine(content, line, x, y);
         }
@@ -192,17 +194,19 @@ public class SpellCardPdfRenderer {
                     index++;
                 }
             }
-            append(lines, row, regular, ruleSize, MUTED);
+            append(lines, row, regular, ruleSize, MUTED, LINE_WIDTH, LineStyle.COMPACT);
         }
         if (!description.isBlank()) {
             if (!lines.isEmpty()) {
-                lines.add(new Line("", regular, 2, INK));
+                lines.add(new Line("", regular, 1.6f, INK, LineStyle.COMPACT, 0));
             }
             for (String paragraph : description.split("\\R", -1)) {
                 if (paragraph.isBlank()) {
-                    lines.add(new Line("", regular, 2, INK));
+                    lines.add(new Line("", regular, 1.4f, INK, LineStyle.COMPACT, 0));
                 } else {
-                    append(lines, paragraph, regular, size, INK);
+                    var style = paragraph.stripLeading().matches("(?s)(?:[•*-]|\\d+[.)])\\s.*")
+                            ? LineStyle.COMPACT : LineStyle.PARAGRAPH;
+                    append(lines, paragraph, regular, size, INK, LINE_WIDTH, style);
                 }
             }
         }
@@ -236,12 +240,19 @@ public class SpellCardPdfRenderer {
 
     private void append(List<Line> lines, String text, PDType0Font font, float fontSize, Color color, float lineWidth)
             throws IOException {
+        append(lines, text, font, fontSize, color, lineWidth, LineStyle.DEFAULT);
+    }
+
+    private void append(List<Line> lines, String text, PDType0Font font, float fontSize, Color color, float lineWidth,
+                        LineStyle style) throws IOException {
         for (String paragraph : text.split("\\R", -1)) {
             StringBuilder line = new StringBuilder();
             for (String word : paragraph.strip().split("(?U)\\s+")) {
                 String printable = printableText(word, font);
                 if (!line.isEmpty() && width(font, fontSize, line + " " + printable) > lineWidth) {
-                    lines.add(new Line(line.toString(), font, fontSize, color));
+                    String wrapped = line.toString();
+                    float extraSpace = style.justify ? extraWordSpace(font, fontSize, wrapped, lineWidth) : 0;
+                    lines.add(new Line(wrapped, font, fontSize, color, style, extraSpace));
                     line.setLength(0);
                 }
                 if (!line.isEmpty()) {
@@ -254,14 +265,23 @@ public class SpellCardPdfRenderer {
                 for (int codePoint : printable.codePoints().toArray()) {
                     String glyph = Character.toString(codePoint);
                     if (!line.isEmpty() && width(font, fontSize, line + glyph) > lineWidth) {
-                        lines.add(new Line(line.toString(), font, fontSize, color));
+                        lines.add(new Line(line.toString(), font, fontSize, color, style, 0));
                         line.setLength(0);
                     }
                     line.append(glyph);
                 }
             }
-            lines.add(new Line(line.toString(), font, fontSize, color));
+            lines.add(new Line(line.toString(), font, fontSize, color, style, 0));
         }
+    }
+
+    private float extraWordSpace(PDType0Font font, float size, String text, float lineWidth) throws IOException {
+        long gaps = text.chars().filter(character -> character == ' ').count();
+        if (gaps < 2) {
+            return 0;
+        }
+        float extra = (lineWidth - width(font, size, text)) / gaps;
+        return extra > 0 && extra <= width(font, size, " ") * MAX_WORD_SPACE_INCREASE ? extra : 0;
     }
 
     private String printableText(String text, PDType0Font font) throws IOException {
@@ -293,19 +313,55 @@ public class SpellCardPdfRenderer {
             content.setFont(line.font(), line.fontSize());
             content.setNonStrokingColor(line.color());
             content.newLineAtOffset(x, top - line.fontSize());
-            content.showText(line.text());
+            if (line.extraWordSpace() > 0) {
+                showJustifiedText(content, line);
+            } else {
+                content.showText(line.text());
+            }
             content.endText();
         }
         return top - line.height();
+    }
+
+    private void showJustifiedText(PDPageContentStream content, Line line) throws IOException {
+        String[] words = line.text().split(" ");
+        Object[] positioned = new Object[2 * words.length - 1];
+        // PDF TJ numbers are offsets in thousandths of text space. Keep the real spaces for copying text.
+        float offset = -1000 * line.extraWordSpace() / line.fontSize();
+        for (int index = 0; index < words.length - 1; index++) {
+            positioned[2 * index] = words[index] + " ";
+            positioned[2 * index + 1] = offset;
+        }
+        positioned[positioned.length - 1] = words[words.length - 1];
+        content.showTextWithPositioning(positioned);
     }
 
     private record Card(List<Line> title, List<Line> type, List<Line> body, Line footer,
                         ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
     }
 
-    private record Line(String text, PDType0Font font, float fontSize, Color color) {
+    private enum LineStyle {
+        DEFAULT(2.3f, false),
+        COMPACT(1.6f, false),
+        PARAGRAPH(1.6f, true);
+
+        private final float leading;
+        private final boolean justify;
+
+        LineStyle(float leading, boolean justify) {
+            this.leading = leading;
+            this.justify = justify;
+        }
+    }
+
+    private record Line(String text, PDType0Font font, float fontSize, Color color, LineStyle style,
+                        float extraWordSpace) {
+        private Line(String text, PDType0Font font, float fontSize, Color color) {
+            this(text, font, fontSize, color, LineStyle.DEFAULT, 0);
+        }
+
         float height() {
-            return fontSize + 2.3f;
+            return fontSize + style.leading;
         }
     }
 }
