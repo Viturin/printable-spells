@@ -140,7 +140,14 @@ paths:
       tags:
         - SpellCardJobs
       operationId: downloadSpellCardJobPdf
-      summary: Download a completed spell card PDF
+      summary: Download or preview a completed spell card PDF
+      parameters:
+        - name: inline
+          in: query
+          description: Serve the PDF for inline viewing instead of as a download.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Completed spell cards PDF.
