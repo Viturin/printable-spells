@@ -1,5 +1,6 @@
 import type { SpellSummary } from "./generated/client/src/models";
 
+const illustratedDice = new Set(["d4", "d6", "d8", "d10", "d12", "d20"]);
 const diceLabels = new Set(["Caster attack", "Target save", "Effect dice", "Heightening"]);
 
 function SpellCardPreview({ spell }: { spell: SpellSummary }) {
@@ -36,7 +37,13 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
         <ul className="cardFaceDiceHeader" aria-label="Dice needed">
           {diceHeader.value.split(/ {2,}/).map((die) => {
             const [symbol, label] = die.split(" ");
-            return <li key={label}><span aria-hidden="true">{symbol}</span> {label}</li>;
+            return (
+              <li key={label}>
+                {illustratedDice.has(label)
+                  ? <img src={import.meta.env.BASE_URL + "dice/" + label + ".png"} alt={label} width={20} height={20} />
+                  : <><span aria-hidden="true">{symbol}</span> {label}</>}
+              </li>
+            );
           })}
         </ul>
       ) : null}

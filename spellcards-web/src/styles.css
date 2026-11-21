@@ -510,7 +510,7 @@ details[open] .disclosureIcon {
 .cardFaceDiceHeader {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 10px;
+  gap: 3px 5px;
   margin: 0;
   padding: 0 9px 5px;
   list-style: none;
@@ -518,6 +518,10 @@ details[open] .disclosureIcon {
   color: var(--card-accent);
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.cardFaceDiceHeader img {
+  display: block;
 }
 
 .cardFaceContent {
