@@ -8,6 +8,7 @@ import io.github.viturin.spellcards.domain.model.ImmutableSpell;
 import io.github.viturin.spellcards.domain.model.Spell;
 import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
 import io.github.viturin.spellcards.domain.model.SpellKind;
+import io.github.viturin.spellcards.domain.model.SpellDice;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,7 @@ public class FoundrySpellJsonParser {
                     .name(name)
                     .level(level)
                     .description(description)
+                    .dice(FoundrySpellDice.read(system, description, name))
                     .kind(inferKind(system, sourcePath))
                     .actionCost(actionCost)
                     .castingDetails(readCastingDetails(system))
@@ -206,7 +208,7 @@ public class FoundrySpellJsonParser {
         return "";
     }
 
-    private static String formulaText(String formula) {
+    static String formulaText(String formula) {
         return formula.replace("@item.level", "spell rank").replace("@item.rank", "spell rank")
                 .replaceAll("\\[([^]]+)]", " ($1)");
     }

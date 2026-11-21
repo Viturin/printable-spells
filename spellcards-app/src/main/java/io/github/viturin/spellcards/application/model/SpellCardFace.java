@@ -37,6 +37,12 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         addRule(rules, "Traditions", String.join(", ", spell.traditions()));
         addRule(rules, "Traits", String.join(", ", spell.traits().stream().filter(trait -> !trait.equals("cantrip")).toList()));
 
+        var dice = spell.dice();
+        addRule(rules, "Caster attack", dice.attack());
+        addRule(rules, "Target save", dice.save());
+        addRule(rules, "Effect dice", dice.effect());
+        addRule(rules, "Heightening", dice.heightening());
+
         String kind = spell.kind().name();
         if (spell.traits().contains("cantrip")) {
             kind = spell.kind() == SpellKind.FOCUS ? "FOCUS CANTRIP" : "CANTRIP";

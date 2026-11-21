@@ -1,5 +1,7 @@
 import type { SpellSummary } from "./generated/client/src/models";
 
+const diceLabels = new Set(["Caster attack", "Target save", "Effect dice", "Heightening"]);
+
 function SpellCardPreview({ spell }: { spell: SpellSummary }) {
   const preview = spell.cardPreview;
   const fallbackRules = [
@@ -12,7 +14,8 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
   const rules = preview?.rules ?? fallbackRules.filter(({ value }) => value);
   const traitRule = rules.find(({ label }) => label === "Traits");
   const traits = traitRule?.value?.split(/,\s*/).filter(Boolean) ?? [];
-  const visibleRules = rules.filter(({ label }) => label !== "Traits");
+  const visibleRules = rules.filter(({ label }) => label !== "Traits" && !diceLabels.has(label));
+  const dice = rules.filter(({ label }) => diceLabels.has(label));
 
   return (
     <article className="cardFace" data-kind={spell.kind}>
@@ -45,6 +48,13 @@ function SpellCardPreview({ spell }: { spell: SpellSummary }) {
           <ul className="cardFaceTraits" aria-label="Spell traits">
             {traits.map((trait) => <li key={trait}>{trait}</li>)}
           </ul>
+        ) : null}
+        {dice.length > 0 ? (
+          <dl className="cardFaceDice" aria-label="Spell dice">
+            {dice.map(({ label, value }) => (
+              <div key={label}><dt>{label}:</dt>{" "}<dd>{value}</dd></div>
+            ))}
+          </dl>
         ) : null}
         {spell.description ? (
           <div className="cardFaceDescription">
