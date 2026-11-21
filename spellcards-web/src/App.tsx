@@ -202,10 +202,11 @@ export function App() {
   }
 
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
-  const inlinePdfUrl = job.kind === "ready" ? job.downloadUrl + "?inline=true" : null;
+  const inlinePdfUrl = job.kind === "ready" ? job.downloadUrl + "?inline=true" : undefined;
+  const isPdfVisible = showPdf && inlinePdfUrl !== undefined;
 
   return (
-    <main className="page">
+    <main className={isPdfVisible ? "page pageWithPdf" : "page"}>
       <header className="pageHeader">
         <span className="bookIcon" aria-hidden="true" />
         <div>
@@ -262,7 +263,7 @@ export function App() {
             ) : null}
           </div>
           <div className="panelBody">
-            {showPdf && inlinePdfUrl ? (
+            {isPdfVisible ? (
               <iframe className="pdfPreviewFrame" title="Generated spell cards PDF" src={inlinePdfUrl} />
             ) : selectedSpells.length ? (
               <SpellCardPreviews spells={selectedSpells} onRemove={removeSpell} />
@@ -304,7 +305,7 @@ export function App() {
               {job.kind === "ready" ? (
                 <a className="downloadLink" href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
               ) : null}
-              {showPdf && inlinePdfUrl ? (
+              {isPdfVisible ? (
                 <a className="downloadLink" href={inlinePdfUrl} target="_blank" rel="noopener">Open in new tab</a>
               ) : null}
               {job.kind === "paused" ? (
