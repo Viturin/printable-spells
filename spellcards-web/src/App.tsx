@@ -79,6 +79,7 @@ export function App() {
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
   const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
+  const [showPdf, setShowPdf] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { job, active, generate, resumeChecking, stopChecking } = useSpellCardPdfJob();
@@ -183,6 +184,7 @@ export function App() {
   }
 
   function addSpells(spells: SpellSummary[]) {
+    setShowPdf(false);
     setSelectedSpells((current) => {
       const byId = new Map(current.map((spell) => [spell.id, spell]));
       for (const spell of spells) {
@@ -195,10 +197,12 @@ export function App() {
   }
 
   function removeSpell(spellId: string) {
+    setShowPdf(false);
     setSelectedSpells((current) => current.filter((spell) => spell.id !== spellId));
   }
 
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
+  const inlinePdfUrl = job.kind === "ready" ? job.downloadUrl + "?inline=true" : null;
 
   return (
     <main className="page">
@@ -250,9 +254,17 @@ export function App() {
                 {selectedSpells.length}
               </output>
             </div>
+            {inlinePdfUrl ? (
+              <div className="previewViews" role="group" aria-label="Preview view">
+                <button type="button" aria-pressed={!showPdf} onClick={() => setShowPdf(false)}>Cards</button>
+                <button type="button" aria-pressed={showPdf} onClick={() => setShowPdf(true)}>PDF</button>
+              </div>
+            ) : null}
           </div>
           <div className="panelBody">
-            {selectedSpells.length ? (
+            {showPdf && inlinePdfUrl ? (
+              <iframe className="pdfPreviewFrame" title="Generated spell cards PDF" src={inlinePdfUrl} />
+            ) : selectedSpells.length ? (
               <SpellCardPreviews spells={selectedSpells} onRemove={removeSpell} />
             ) : <p className="emptyState emptySelection">Add spells to preview your cards here.</p>}
           </div>
@@ -263,7 +275,10 @@ export function App() {
                 value={pdfLayout}
                 disabled={active}
                 aria-describedby="pdf-layout-hint"
-                onChange={(event) => setPdfLayout(event.target.value as SpellCardPdfLayout)}
+                onChange={(event) => {
+                  setPdfLayout(event.target.value as SpellCardPdfLayout);
+                  setShowPdf(false);
+                }}
               >
                 <option value="A4_SHEET">A4 cut sheets</option>
                 <option value="PLAYING_CARD">Playing-card pages</option>
@@ -279,12 +294,18 @@ export function App() {
                 className="primaryButton"
                 type="button"
                 disabled={selectedSpells.length === 0 || active}
-                onClick={() => void generate(selectedSpells.map((spell) => spell.name), pdfLayout)}
+                onClick={() => {
+                  setShowPdf(true);
+                  void generate(selectedSpells.map((spell) => spell.name), pdfLayout);
+                }}
               >
                 Generate PDF
               </button>
               {job.kind === "ready" ? (
                 <a className="downloadLink" href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
+              ) : null}
+              {showPdf && inlinePdfUrl ? (
+                <a className="downloadLink" href={inlinePdfUrl} target="_blank" rel="noopener">Open in new tab</a>
               ) : null}
               {job.kind === "paused" ? (
                 <>

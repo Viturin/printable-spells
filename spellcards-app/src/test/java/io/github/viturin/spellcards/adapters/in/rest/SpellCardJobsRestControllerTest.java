@@ -82,7 +82,7 @@ class SpellCardJobsRestControllerTest {
     }
 
     @Test
-    void offersACompletedPdfAsAnAttachment() throws Exception {
+    void offersTheSameCompletedPdfAsAnAttachmentAndInlinePreview() throws Exception {
         byte[] pdf = "%PDF-1.7".getBytes(StandardCharsets.US_ASCII);
         store.createQueued(id, List.of("Daze"), SpellCardPdfLayout.A4_SHEET);
         store.markProcessing(id);
@@ -95,6 +95,12 @@ class SpellCardJobsRestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
                 .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"spellcards.pdf\""))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(content().bytes(pdf));
+        mvc.perform(get(pdfUrl()).param("inline", "true").accept(MediaType.APPLICATION_PDF))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"spellcards.pdf\""))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(content().bytes(pdf));
     }

@@ -57,9 +57,10 @@ public class SpellCardJobsRestController implements SpellCardJobsApi {
     }
 
     @Override
-    public ResponseEntity<Resource> downloadSpellCardJobPdf(UUID jobId) {
+    public ResponseEntity<Resource> downloadSpellCardJobPdf(UUID jobId, Boolean inline) {
         var resource = new InputStreamResource(jobResults.download(jobId));
-        var disposition = ContentDisposition.attachment().filename("spellcards.pdf").build();
+        var disposition = (Boolean.TRUE.equals(inline) ? ContentDisposition.inline() : ContentDisposition.attachment())
+                .filename("spellcards.pdf").build();
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .contentType(MediaType.APPLICATION_PDF)

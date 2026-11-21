@@ -413,6 +413,42 @@ details[open] .disclosureIcon {
   margin: 0;
 }
 
+.previewViews {
+  display: flex;
+  gap: 3px;
+  justify-self: start;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.previewViews button {
+  min-height: 34px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.previewViews button[aria-pressed="true"] {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.pdfPreviewFrame {
+  display: block;
+  width: 100%;
+  height: clamp(300px, calc(100svh - 27rem), 590px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
 .previewList li {
   min-width: 0;
 }
@@ -649,6 +685,10 @@ details[open] .disclosureIcon {
 
   .previewList {
     max-height: 65svh;
+  }
+
+  .pdfPreviewFrame {
+    height: 60svh;
   }
 }
 

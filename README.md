@@ -129,6 +129,6 @@ On a push to `main`, `.github/workflows/deploy.yml` publishes the images and dis
 
 Use **Import Pathbuilder JSON** to paste a character export. Known and prepared spells, focus spells, and rituals are matched by name and added to the selection. The browser sends spell names to the catalog and lists any names it could not match.
 
-Select spells, choose **A4 cut sheets** or **Playing-card pages**, then click **Generate PDF**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets hold up to nine cards and include cut guides. Print at **Actual size** or **100%** to preserve the dimensions. The browser attempts a download when the PDF is ready and keeps a **Download PDF** link available.
+Select spells, choose **A4 cut sheets** or **Playing-card pages**, then click **Generate PDF**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets hold up to nine cards and include cut guides. Print at **Actual size** or **100%** to preserve the dimensions. When the PDF is ready, you can view it in the selection panel, open it in a new tab, or download it. The browser also attempts the download automatically.
 
 On the cards, ◆ marks one action, ◇ marks a free action, and ↶ marks a reaction. Longer casting times are written out. Long spell descriptions continue on numbered cards.
