@@ -7,7 +7,6 @@ import type {
 } from "./generated/client/src/models";
 
 const jobsUrl = "/api/v1/spellcards/jobs";
-const previewDebounceMs = 650;
 const pollIntervalMs = 2000;
 const requestTimeoutMs = 10000;
 
@@ -29,9 +28,9 @@ async function responseMessage(response: Response, fallback: string): Promise<st
   return fallback;
 }
 
-export function useSpellCardPdfJob(request: CreateSpellCardJobRequest) {
+export function useSpellCardPdfJob(request: CreateSpellCardJobRequest | null, debounceMs = 0) {
   const [attempt, setAttempt] = useState(0);
-  const hasSpells = request.spellNames.length > 0;
+  const hasSpells = Boolean(request?.spellNames.length);
   const requestBody = JSON.stringify(request);
   const requestKey = JSON.stringify([requestBody, attempt]);
   const [result, setResult] = useState<{ key: string; job: PdfJob }>();
@@ -66,12 +65,12 @@ export function useSpellCardPdfJob(request: CreateSpellCardJobRequest) {
           setResult({ key: requestKey, job: { kind: "failed", message } });
         }
       }
-    }, previewDebounceMs);
+    }, debounceMs);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [hasSpells, requestBody, requestKey]);
+  }, [hasSpells, requestBody, requestKey, debounceMs]);
 
   useEffect(() => {
     if (pollingJobId === null) {

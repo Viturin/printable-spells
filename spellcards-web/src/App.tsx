@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { SpellCardPdfLayout, SpellSummary } from "./generated/client/src/models";
+import type { CreateSpellCardJobRequest, SpellCardPdfLayout, SpellSummary } from "./generated/client/src/models";
 import { PathbuilderImport } from "./PathbuilderImport";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
@@ -82,10 +82,16 @@ export function App() {
   const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { job, retry, resumeChecking } = useSpellCardPdfJob({
-    spellNames: selectedSpells.map((spell) => spell.name),
-    layout: pdfLayout,
-  });
+  const [exportRequest, setExportRequest] = useState<CreateSpellCardJobRequest | null>(null);
+  const spellNames = selectedSpells.map((spell) => spell.name);
+  const preview = useSpellCardPdfJob({ spellNames, layout: "PLAYING_CARD" }, 650);
+  const { job, retry, resumeChecking } = useSpellCardPdfJob(exportRequest);
+  const exportActive = job.kind === "submitting" || job.kind === "checking";
+
+  function generatePdf() {
+    setExportRequest({ spellNames, layout: pdfLayout });
+    retry();
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -203,7 +209,9 @@ export function App() {
   }
 
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
-  const inlinePdfUrl = job.kind === "ready" ? job.downloadUrl + "?inline=true" : undefined;
+  const previewUrl = preview.job.kind === "ready" ? preview.job.downloadUrl + "?inline=true" : undefined;
+  const exportMatchesSelection = exportRequest?.layout === pdfLayout
+    && JSON.stringify(exportRequest.spellNames) === JSON.stringify(spellNames);
   const hasSelection = selectedSpells.length > 0;
 
   return (
@@ -275,11 +283,18 @@ export function App() {
                     );
                   })}
                 </ul>
-                {inlinePdfUrl ? (
+                {previewUrl ? (
                   <Suspense fallback={<p className="emptyState" role="status">Loading PDF preview…</p>}>
-                    <PdfPreview key={inlinePdfUrl} url={inlinePdfUrl} />
+                    <PdfPreview key={previewUrl} url={previewUrl} />
                   </Suspense>
-                ) : null}
+                ) : preview.job.kind === "failed" || preview.job.kind === "paused" ? (
+                  <div className="emptyState">
+                    <p className="error" role="status">{preview.job.message}</p>
+                    <button type="button" onClick={preview.job.kind === "paused" ? preview.resumeChecking : preview.retry}>
+                      Retry card preview
+                    </button>
+                  </div>
+                ) : <p className="emptyState" role="status">Preparing card previews…</p>}
               </>
             ) : <p className="emptyState emptySelection">Add spells to preview your cards here.</p>}
           </div>
@@ -301,25 +316,20 @@ export function App() {
                 : "One 63.5 × 88.9 mm card per page."}
             </p>
             <div className="pdfActions">
-              {job.kind === "ready" ? (
+              <button type="button" disabled={!hasSelection || exportActive} onClick={generatePdf}>
+                Generate PDF
+              </button>
+              {job.kind === "ready" && exportMatchesSelection ? (
                 <a className="downloadLink" href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
               ) : null}
-              {inlinePdfUrl ? (
-                <a className="downloadLink" href={inlinePdfUrl} target="_blank" rel="noopener">Open in new tab</a>
-              ) : null}
               {job.kind === "paused" ? (
-                <>
-                  <button type="button" onClick={resumeChecking}>Resume checking</button>
-                </>
-              ) : null}
-              {job.kind === "failed" || job.kind === "paused" ? (
-                <button type="button" onClick={retry}>Regenerate PDF</button>
+                <button type="button" onClick={resumeChecking}>Resume checking</button>
               ) : null}
             </div>
             <div className="pdfStatus" role="status" aria-live="polite">
-              {job.kind === "submitting" ? <p>Preparing PDF preview…</p> : null}
+              {job.kind === "submitting" ? <p>Submitting PDF export…</p> : null}
               {job.kind === "checking" ? <p>{job.status === "QUEUED" ? "PDF queued…" : "Generating PDF…"}</p> : null}
-              {job.kind === "ready" ? <p>PDF ready.</p> : null}
+              {job.kind === "ready" && exportMatchesSelection ? <p>PDF ready.</p> : null}
               {job.kind === "failed" || job.kind === "paused" ? <p className="error">{job.message}</p> : null}
             </div>
           </div>

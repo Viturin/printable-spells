@@ -400,32 +400,31 @@ details[open] .disclosureIcon {
   gap: 10px;
 }
 
-.pdfPreview {
-  border: 1px solid var(--line);
-  border-radius: 8px;
+.pdfCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr));
+  gap: 12px;
+  max-height: 60svh;
+  overflow: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+}
+
+.pdfCardTile {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 5 / 7;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: 5px;
   background: var(--surface-soft);
 }
 
-.pdfPreviewPage {
-  max-height: 65svh;
-  overflow: auto;
-  padding: 8px;
-}
-
-.pdfPreview canvas {
+.pdfCardTile canvas {
   display: block;
   width: 100%;
-  max-width: var(--pdf-page-width, 100%);
-  height: auto;
-  margin-inline: auto;
-}
-
-.pdfPageControls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px;
+  height: 100%;
 }
 
 .previewRemove {
