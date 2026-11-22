@@ -1,134 +1,69 @@
 # Printable Spells
 
-## IntelliJ
+Create printable Pathfinder 2e spell cards.
 
-Shared run configurations are in the workspace root under `.idea/runConfigurations/`:
-- `bootstrap-spellcards` (bootstrap data + generated clients)
-- `spellcards-app` (Spring Boot backend)
-- `spellcards-web-dev` (Vite dev server)
-- `fullstack-dev` (starts both)
+## Use Spell Cards
 
-## Maven
+1. Search for spells and select the ones you want. Use **Import Pathbuilder JSON** to paste a character export and select known, prepared, and focus spells and rituals by name. The browser sends spell names to the catalog and reports names it cannot match.
+2. Check the responsive preview grid. Each tile is a playing-card page from the PDF renderer. Long spells have numbered continuation cards that appear in order.
+3. Choose **Playing-card pages** or **A4 cut sheets** and click **Generate PDF**. The layout choice applies to the export. When it is ready, click **Download PDF**.
+4. Print at **Actual size** or **100%**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets fit up to nine cards and include cut guides.
 
-Modules:
-- `spellcards-api`: OpenAPI contract + generated server interfaces/models
-- `spellcards-queue`: shared queue contracts/configuration
-- `spellcards-app`: REST API (search + job enqueue)
-- `spellcards-worker`: async queue consumer
-- `spellcards-web`: frontend
+The cast box shows action symbols and the dice the caster rolls. ◆ marks one action, ◇ marks a free action, and ↶ marks a reaction. Longer casting times are written out. Heightened effects follow the base rules.
 
-Common commands:
+## Local development
+
+From the Printable Spells checkout, use JDK 25 and Maven to fetch the pinned spell catalog, generate the API clients, and verify the application.
 
 ```bash
-mvn -Psystem-node compile
-mvn -pl spellcards-app -am spring-boot:run
-mvn -pl spellcards-worker -am spring-boot:run
-mvn -pl spellcards-web verify
-mvn test
+mvn -B -Pfetch-foundry-pf2e-spells verify
 ```
 
-The `system-node` profile uses the Node.js and npm binaries on `PATH` for local
-builds. CI can use the default Maven-managed Node installation.
+Maven manages Node by default. Add `system-node` to the profile list to use Node.js 24 and npm from your PATH.
 
-Frontend dev via Maven:
+### IntelliJ with the shared dev workspace
 
-```bash
-mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run dev"
-```
-
-Regenerate frontend OpenAPI client:
+The separate `dev-workspace` repository provides RabbitMQ and generated IntelliJ configurations. From its root, run:
 
 ```bash
-mvn -pl spellcards-web frontend:npm -Dfrontend.npm.arguments="run generate:client"
-```
-
-## Local Hosting (Docker Compose)
-
-The shared `../dev-workspace` repository owns local RabbitMQ. Start it before running the application containers:
-
-```bash
-cd ../dev-workspace
 ./bin/init-workspace
 ./bin/services-up rabbitmq
-cd ../spell_cards_from_pf2
 ```
 
-Build and run the API + worker + frontend:
+Open the workspace root in IntelliJ and import its Maven project. Start `spellcards-app`, `spellcards-worker`, and `spellcards-web-dev`, or use the `fullstack-dev` compound configuration. Open the URL printed by Vite, normally `http://localhost:5173`. Vite proxies API requests to port 8080.
+
+When running the API and worker outside these configurations, give both processes the same RabbitMQ credentials and the same absolute `SPELLCARDS_ARTIFACT_DIR` path.
+
+### Local Docker Compose
+
+The base Compose file runs the API, worker, and web app and shares the PDF artifact volume. The checked-in overlays publish the web port. The production overlay publishes port 80 and the staging overlay publishes port 8081 for local use.
+
+For a checkout at `dev-workspace/workspace/printable-spells`, first initialize the workspace and start RabbitMQ as above. Then run these commands from the Printable Spells checkout:
 
 ```bash
-docker compose --env-file ../dev-workspace/.env up --build -d
+docker compose --env-file ../../.env -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
-Open:
-- `http://localhost`
-- RabbitMQ UI: `http://localhost:15672`
-
-Optional local DNS name:
-1. Add `127.0.0.1 spellcards.local` to `/etc/hosts` (or your LAN DNS).
-2. Open `http://spellcards.local`.
-
-Stop:
+Open `http://localhost`. To stop the stack:
 
 ```bash
-docker compose --env-file ../dev-workspace/.env down
+docker compose --env-file ../../.env -f docker-compose.yml -f docker-compose.prod.yml down
 ```
 
-## IntelliJ Local Development
+Compose expects RabbitMQ at `host.docker.internal:5672`. If your Docker host cannot route containers to the workspace broker's loopback binding, use the IntelliJ setup above or provide a broker reachable by the containers. For a standalone checkout, supply your own env file with `RABBITMQ_USERNAME` and `RABBITMQ_PASSWORD`.
 
-Use the centralized IntelliJ project in `../dev-workspace`. Run `../dev-workspace/bin/init-workspace` after changing the workspace manifest, then open the `dev-workspace` directory in IntelliJ and import its generated `pom.xml` as a Maven project.
+## Data and PDF rendering
 
-The generated run configurations include `spellcards-app`, `spellcards-worker`, `spellcards-web-dev`, `fullstack-dev`, and RabbitMQ lifecycle commands.
+- [spellcards-api](spellcards-api) defines the OpenAPI contract and generates the server API types.
+- [spellcards-app](spellcards-app) searches the catalog at `GET /api/v1/spells/search` and resolves imported spell names at `POST /api/v1/spells/resolve`. The Foundry release is pinned in [its POM](spellcards-app/pom.xml). The fetch profile reads `packs/spells.json` from `json-assets.zip` and caches it under `spellcards-app/src/generated/resources/foundry/`. Matching cached data is reused. Run Maven `clean verify` with the fetch profile to refresh it.
+- [spellcards-queue](spellcards-queue) defines the RabbitMQ job messages. The API records a manifest before publishing to the queue, which defaults to `spellcards.pdf.jobs`.
+- [spellcards-worker](spellcards-worker) renders both PDF layouts. The API and worker share the artifact directory, and completed PDFs are retained for 24 hours by default. Submit a job at `POST /api/v1/spellcards/jobs`, read its status at `GET /api/v1/spellcards/jobs/{jobId}`, and fetch the completed PDF from its returned download URL.
+- [spellcards-web](spellcards-web) requests playing-card PDFs for the preview and renders the pages in the browser. Print exports use the same worker and start on demand.
 
-## Staging + Prod (Same Host)
+## Deployment
 
-Run both environments on one machine with different compose project names.
+The [Deploy workflow](.github/workflows/deploy.yml) publishes commit-tagged API, worker, and web images to GHCR on pushes to `main`. It dispatches staging to `homelab-ops` and waits for that run to pass, including the homepage and spell search checks. The workflow then hands off the same image tag to its production job. GitHub's configured `production` environment rules apply to that job, including the required reviewer currently configured.
 
-Prod (port `80`):
+Spell Cards uses this repository's workflow to coordinate its deploys. Other homelab services are deployed separately from `homelab-ops`.
 
-```bash
-docker compose -p spellcards-prod -f docker-compose.yml -f docker-compose.prod.yml up --build -d
-```
-
-Staging (port `8081`):
-
-```bash
-docker compose -p spellcards-staging -f docker-compose.yml -f docker-compose.staging.yml up --build -d
-```
-
-Useful commands:
-
-```bash
-# Logs
-docker compose -p spellcards-prod -f docker-compose.yml -f docker-compose.prod.yml logs -f
-docker compose -p spellcards-staging -f docker-compose.yml -f docker-compose.staging.yml logs -f
-
-# Stop
-docker compose -p spellcards-prod -f docker-compose.yml -f docker-compose.prod.yml down
-docker compose -p spellcards-staging -f docker-compose.yml -f docker-compose.staging.yml down
-```
-
-## CI Deploy Flow
-
-On a push to `main`, `.github/workflows/deploy.yml` publishes the images and dispatches staging to `homelab-ops`. It waits for that deployment and its homepage and spell-search checks to pass. The `production` environment then requests reviewer approval before dispatching the same image tag to production.
-
-`HOMELAB_OPS_DISPATCH_TOKEN` needs **Contents: Read and write** and **Actions: Read-only** for `Viturin/homelab-ops`. The manual `production` target can promote an already-verified image or roll back directly, with the same reviewer approval.
-
-## What This Tool Does
-
-- Fetches PF2e spell data from Foundry release asset `json-assets.zip` (`packs/spells.json`) and stores generated resources in `spellcards-app/src/generated/resources/foundry/`.
-- Uses a pinned Foundry release tag from `spellcards-app/pom.xml` (`foundry.version`).
-- Skips download when generated data already matches the pinned version; `mvn -Pfetch-foundry-pf2e-spells clean` forces a refresh.
-- Loads and parses spells in the backend.
-- Exposes fuzzy search via REST: `GET /api/v1/spells/search`.
-- Exposes async job enqueue endpoint: `POST /api/v1/spellcards/jobs`.
-- Records each job in `runtime/spellcard-jobs/<job-id>/job.json` before publishing. Local Compose shares the `spellcards-artifacts` volume between the API and worker. When running the processes directly from different working directories, set `SPELLCARDS_ARTIFACT_DIR` to the same absolute path for each.
-- Publishes job messages to RabbitMQ queue `spellcards.pdf.jobs`.
-- Generates playing-card pages or A4 cut sheets in `spellcards-worker` and retains the PDF for 24 hours after completion by default.
-- Provides job status and PDF download endpoints under `/api/v1/spellcards/jobs/{jobId}`.
-- Provides a frontend for live spell search and card-oriented output.
-
-Use **Import Pathbuilder JSON** to paste a character export. Known and prepared spells, focus spells, and rituals are matched by name and added to the selection. The browser sends spell names to the catalog and lists any names it could not match.
-
-Select spells, choose **A4 cut sheets** or **Playing-card pages**, then click **Generate PDF**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets hold up to nine cards and include cut guides. Print at **Actual size** or **100%** to preserve the dimensions. When the PDF is ready, you can view it in the selection panel, open it in a new tab, or download it. The browser also attempts the download automatically.
-
-On the cards, ◆ marks one action, ◇ marks a free action, and ↶ marks a reaction. Longer casting times are written out. Long spell descriptions continue on numbered cards.
+To promote an existing image or roll back, manually run **Deploy** with its `sha-…` image tag in `rollback_tag`. Choose **both** to verify staging before production, **staging** to validate only, or **production** to dispatch directly under the production environment rules. The dispatch token `HOMELAB_OPS_DISPATCH_TOKEN` needs **Contents: Read and write** to dispatch and **Actions: Read-only** to check staging runs in `Viturin/homelab-ops`.
