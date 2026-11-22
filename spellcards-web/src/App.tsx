@@ -85,7 +85,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [exportRequest, setExportRequest] = useState<CreateSpellCardJobRequest | null>(null);
   const spellNames = selectedSpells.map((spell) => spell.name);
-  const preview = useSpellCardPdfJob({ spellNames, layout: "PLAYING_CARD" }, 650);
+  const preview = useSpellCardPdfJob({ spellNames, layout: doubleSided ? "PLAYING_CARD_DUPLEX" : "PLAYING_CARD" }, 650);
   const { job, retry, resumeChecking } = useSpellCardPdfJob(exportRequest);
   const exportActive = job.kind === "submitting" || job.kind === "checking";
 
@@ -293,7 +293,7 @@ export function App() {
                 </ul>
                 {previewUrl ? (
                   <Suspense fallback={<p className="emptyState" role="status">Loading PDF preview…</p>}>
-                    <PdfPreview key={previewUrl} url={previewUrl} />
+                    <PdfPreview key={previewUrl} url={previewUrl} doubleSided={doubleSided} />
                   </Suspense>
                 ) : preview.job.kind === "failed" || preview.job.kind === "paused" ? (
                   <div className="emptyState">
