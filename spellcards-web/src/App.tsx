@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { SpellCardPdfLayout, SpellSummary } from "./generated/client/src/models";
 import { PathbuilderImport } from "./PathbuilderImport";
-import { SpellCardPreviews } from "./SpellCardPreviews";
 import { useSpellCardPdfJob } from "./useSpellCardPdfJob";
 
 type SpellSearchResponse = {
@@ -74,15 +73,19 @@ function SpellList({ spells, onAdd }: SpellListProps) {
   );
 }
 
+const PdfPreview = lazy(() => import("./PdfPreview"));
+
 export function App() {
   const [query, setQuery] = useState("daze");
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
   const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
-  const [showPdf, setShowPdf] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { job, active, generate, resumeChecking, stopChecking } = useSpellCardPdfJob();
+  const { job, retry, resumeChecking } = useSpellCardPdfJob({
+    spellNames: selectedSpells.map((spell) => spell.name),
+    layout: pdfLayout,
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,7 +187,6 @@ export function App() {
   }
 
   function addSpells(spells: SpellSummary[]) {
-    setShowPdf(false);
     setSelectedSpells((current) => {
       const byId = new Map(current.map((spell) => [spell.id, spell]));
       for (const spell of spells) {
@@ -197,16 +199,15 @@ export function App() {
   }
 
   function removeSpell(spellId: string) {
-    setShowPdf(false);
     setSelectedSpells((current) => current.filter((spell) => spell.id !== spellId));
   }
 
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
   const inlinePdfUrl = job.kind === "ready" ? job.downloadUrl + "?inline=true" : undefined;
-  const isPdfVisible = showPdf && inlinePdfUrl !== undefined;
+  const hasSelection = selectedSpells.length > 0;
 
   return (
-    <main className={isPdfVisible ? "page pageWithPdf" : "page"}>
+    <main className={hasSelection ? "page pageWithPdf" : "page"}>
       <header className="pageHeader">
         <span className="bookIcon" aria-hidden="true" />
         <div>
@@ -255,18 +256,25 @@ export function App() {
                 {selectedSpells.length}
               </output>
             </div>
-            {inlinePdfUrl ? (
-              <div className="previewViews" role="group" aria-label="Preview view">
-                <button type="button" aria-pressed={!showPdf} onClick={() => setShowPdf(false)}>Cards</button>
-                <button type="button" aria-pressed={showPdf} onClick={() => setShowPdf(true)}>PDF</button>
-              </div>
-            ) : null}
           </div>
           <div className="panelBody">
-            {isPdfVisible ? (
-              <iframe className="pdfPreviewFrame" title="Generated spell cards PDF" src={inlinePdfUrl} />
-            ) : selectedSpells.length ? (
-              <SpellCardPreviews spells={selectedSpells} onRemove={removeSpell} />
+            {hasSelection ? (
+              <>
+                <ul className="selectedSpellList" aria-label="Spells in this PDF">
+                  {selectedSpells.map((spell) => (
+                    <li key={spell.id}>
+                      <span>{spell.name}</span>
+                      <button type="button" className="previewRemove" aria-label={"Remove " + spell.name}
+                        onClick={() => removeSpell(spell.id)}>Remove</button>
+                    </li>
+                  ))}
+                </ul>
+                {inlinePdfUrl ? (
+                  <Suspense fallback={<p className="emptyState" role="status">Loading PDF preview…</p>}>
+                    <PdfPreview key={inlinePdfUrl} url={inlinePdfUrl} />
+                  </Suspense>
+                ) : null}
+              </>
             ) : <p className="emptyState emptySelection">Add spells to preview your cards here.</p>}
           </div>
           <div className="panelFooter">
@@ -274,12 +282,8 @@ export function App() {
               <span>PDF layout</span>
               <select
                 value={pdfLayout}
-                disabled={active}
                 aria-describedby="pdf-layout-hint"
-                onChange={(event) => {
-                  setPdfLayout(event.target.value as SpellCardPdfLayout);
-                  setShowPdf(false);
-                }}
+                onChange={(event) => setPdfLayout(event.target.value as SpellCardPdfLayout)}
               >
                 <option value="A4_SHEET">A4 cut sheets</option>
                 <option value="PLAYING_CARD">Playing-card pages</option>
@@ -291,32 +295,23 @@ export function App() {
                 : "One 63.5 × 88.9 mm card per page."}
             </p>
             <div className="pdfActions">
-              <button
-                className="primaryButton"
-                type="button"
-                disabled={selectedSpells.length === 0 || active}
-                onClick={() => {
-                  setShowPdf(true);
-                  void generate(selectedSpells.map((spell) => spell.name), pdfLayout);
-                }}
-              >
-                Generate PDF
-              </button>
               {job.kind === "ready" ? (
                 <a className="downloadLink" href={job.downloadUrl} download="spellcards.pdf">Download PDF</a>
               ) : null}
-              {isPdfVisible ? (
+              {inlinePdfUrl ? (
                 <a className="downloadLink" href={inlinePdfUrl} target="_blank" rel="noopener">Open in new tab</a>
               ) : null}
               {job.kind === "paused" ? (
                 <>
                   <button type="button" onClick={resumeChecking}>Resume checking</button>
-                  <button type="button" onClick={stopChecking}>Stop checking</button>
                 </>
+              ) : null}
+              {job.kind === "failed" || job.kind === "paused" ? (
+                <button type="button" onClick={retry}>Regenerate PDF</button>
               ) : null}
             </div>
             <div className="pdfStatus" role="status" aria-live="polite">
-              {job.kind === "submitting" ? <p>Submitting PDF job…</p> : null}
+              {job.kind === "submitting" ? <p>Preparing PDF preview…</p> : null}
               {job.kind === "checking" ? <p>{job.status === "QUEUED" ? "PDF queued…" : "Generating PDF…"}</p> : null}
               {job.kind === "ready" ? <p>PDF ready.</p> : null}
               {job.kind === "failed" || job.kind === "paused" ? <p className="error">{job.message}</p> : null}

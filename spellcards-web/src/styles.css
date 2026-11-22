@@ -400,232 +400,32 @@ details[open] .disclosureIcon {
   gap: 10px;
 }
 
-.previewList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 205px), 1fr));
-  align-items: start;
-  gap: 12px;
-  max-height: clamp(280px, calc(100svh - 25rem), 590px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  list-style: none;
-  padding: 4px;
-  margin: 0;
-}
-
-.previewViews {
-  display: flex;
-  gap: 3px;
-  justify-self: start;
-  padding: 3px;
+.pdfPreview {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-soft);
 }
 
-.previewViews button {
-  min-height: 34px;
-  padding: 5px 12px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.84rem;
-  font-weight: 650;
+.pdfPreviewPage {
+  max-height: 65svh;
+  overflow: auto;
+  padding: 8px;
 }
 
-.previewViews button[aria-pressed="true"] {
-  border-color: var(--line);
-  background: var(--surface);
-  color: var(--accent);
-}
-
-.pdfPreviewFrame {
+.pdfPreview canvas {
   display: block;
   width: 100%;
-  height: clamp(300px, calc(100svh - 27rem), 590px);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-soft);
+  max-width: var(--pdf-page-width, 100%);
+  height: auto;
+  margin-inline: auto;
 }
 
-.previewList li {
-  min-width: 0;
-}
-
-.cardFace {
-  --card-accent: #29484a;
-  aspect-ratio: 5 / 7;
-  border: 3px solid #262c30;
-  border-radius: 7px;
-  background: #fffbf3;
-  overflow-wrap: anywhere;
-}
-
-.cardFace[data-kind="FOCUS"] {
-  --card-accent: #4c3b60;
-}
-
-.cardFace[data-kind="RITUAL"] {
-  --card-accent: #563a29;
-}
-
-.cardFaceHeader {
+.pdfPageControls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 9px;
-  background: var(--card-accent);
-  color: #fffbf3;
-}
-
-.cardFaceHeader h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.15;
-}
-
-.cardFaceAction {
-  display: grid;
-  justify-items: center;
-  flex-shrink: 0;
-  padding: 2px 5px;
-  background: #e9ddc5;
-  color: var(--card-accent);
-  font-size: 0.64rem;
-  line-height: 1.2;
-  font-weight: 700;
-}
-
-.cardFaceType {
-  padding: 5px 9px;
-  background: #e9ddc5;
-  color: var(--card-accent);
-  font-size: 0.69rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.cardFaceDiceHeader {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 5px;
-  margin: 0;
-  padding: 0 9px 5px;
-  list-style: none;
-  background: #e9ddc5;
-  color: var(--card-accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.cardFaceDiceHeader img {
-  display: block;
-}
-
-.cardFaceContent {
-  padding: 7px 8px;
-  font-size: 0.8rem;
-  line-height: 1.32;
-}
-
-.cardFaceRules {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 2px 8px;
-  color: #534843;
-}
-
-.cardFaceRule {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 3px;
-  max-width: 100%;
-}
-
-.cardFaceRules dt,
-.cardFaceRules dd {
-  display: inline;
-}
-
-.cardFaceRules dt {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex: none;
-  font-weight: 650;
-}
-
-.cardFaceRules dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.cardFaceRuleSymbol {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 1.2em;
-  height: 1.2em;
-  border: 1px solid currentColor;
-  border-radius: 2px;
-  font-family: system-ui, sans-serif;
-  font-size: 0.8em;
-  line-height: 1;
-}
-
-.cardFaceTraits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  margin: 5px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.cardFaceTraits li {
-  padding: 1px 4px;
-  border: 1px solid #887b70;
-  border-radius: 3px;
-  background: #f4eee3;
-  color: #352f2b;
-  font-size: 0.62rem;
-  font-weight: 650;
-  line-height: 1.3;
-  text-transform: uppercase;
-}
-
-.cardFaceRules + .cardFaceDescription {
-  margin-top: 5px;
-}
-
-.cardFaceDice {
-  margin-block: 5px;
-  padding: 4px 6px;
-  border-inline-start: 2px solid var(--card-accent);
-  background: #f4eee3;
-  font-size: 0.75rem;
-}
-
-.cardFaceDice dt,
-.cardFaceDice dd {
-  display: inline;
-}
-
-.cardFaceDice dt {
-  font-weight: 650;
-}
-
-.cardFaceDescription {
-  display: grid;
-  gap: 4px;
-  hyphens: auto;
-  text-align: justify;
-  text-align-last: start;
-  text-justify: inter-word;
-  white-space: pre-line;
+  padding: 6px;
 }
 
 .previewRemove {
@@ -723,22 +523,6 @@ details[open] .disclosureIcon {
   border-color: var(--accent);
 }
 
-.pdfActions .primaryButton {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fffefa;
-}
-
-.pdfActions .primaryButton:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.pdfActions .primaryButton:disabled {
-  background: #e8e1d9;
-  border-color: #e8e1d9;
-  color: #6d625b;
-}
-
 .pdfStatus {
   margin-top: 8px;
   color: var(--muted);
@@ -784,13 +568,6 @@ details[open] .disclosureIcon {
     max-height: clamp(156px, 42svh, 360px);
   }
 
-  .previewList {
-    max-height: 65svh;
-  }
-
-  .pdfPreviewFrame {
-    height: 60svh;
-  }
 }
 
 @media (max-width: 420px) {
@@ -819,4 +596,31 @@ details[open] .disclosureIcon {
   .spellSummary {
     gap: 7px;
   }
+}
+
+.selectedSpellList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  max-height: 7rem;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0 4px;
+  margin: 0 0 8px;
+}
+
+.selectedSpellList li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline-start: 8px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.selectedSpellList .previewRemove {
+  margin: 0;
 }
