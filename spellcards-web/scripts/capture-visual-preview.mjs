@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 const [baseUrl = "http://127.0.0.1:4173", outputDir = "out/visual-preview"] = process.argv.slice(2);
 const output = (name) => resolve(outputDir, name);
 const run = promisify(execFile);
+const gallerySpells = ["Heal", "Thunderstrike", "Lose the Path"];
 
 async function waitForCard(canvas) {
   await canvas.scrollIntoViewIfNeeded();
@@ -64,13 +65,15 @@ async function capture(browser, name, viewport) {
   try {
     await page.goto(baseUrl);
     await page.getByRole("checkbox", { name: "Double-sided" }).uncheck();
-    await page.getByRole("searchbox", { name: "Search spells" }).fill("Heal");
-    await page.getByRole("button", { name: "Add Heal", exact: true }).click();
+    const search = page.getByRole("searchbox", { name: "Search spells" });
+    for (const spell of gallerySpells) {
+      await search.fill(spell);
+      await page.getByRole("button", { name: `Add ${spell}`, exact: true }).click();
+    }
 
     const grid = page.getByRole("list", { name: "Spell card previews" });
     await grid.waitFor();
     const tiles = grid.getByRole("listitem");
-    assert.equal(await tiles.count(), 2, "Heal should produce exactly two card faces");
     for (const tile of await tiles.all()) {
       await waitForCard(tile.locator("canvas"));
     }
@@ -81,9 +84,17 @@ async function capture(browser, name, viewport) {
 
     if (name === "desktop") {
       await grid.screenshot({ path: output("card-grid.png"), animations: "disabled" });
-      await tiles.nth(1).screenshot({ path: output("continuation-card.png") });
       await exportPdf(page, "PLAYING_CARD", "playing-cards.pdf");
       await exportPdf(page, "A4_SHEET", "a4-cut-sheets.pdf");
+
+      // Keep the print example to one physical card, independent of the gallery.
+      for (const spell of gallerySpells.slice(1)) {
+        await page.getByRole("button", { name: `Remove ${spell}`, exact: true }).click();
+      }
+      await grid.waitFor();
+      assert.equal(await tiles.count(), 2, "Heal should produce exactly two card faces");
+      await waitForCard(tiles.nth(1).locator("canvas"));
+      await tiles.nth(1).screenshot({ path: output("continuation-card.png") });
 
       await page.getByRole("checkbox", { name: "Double-sided" }).check();
       await grid.getByRole("button", { name: "Spell card 1, front side. Show back" }).click();
