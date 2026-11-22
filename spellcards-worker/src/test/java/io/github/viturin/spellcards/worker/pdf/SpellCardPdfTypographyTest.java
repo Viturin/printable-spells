@@ -112,9 +112,9 @@ class SpellCardPdfTypographyTest {
 
     @ParameterizedTest
     @EnumSource(SpellCardPdfLayout.class)
-    void keepsHeightenedRulesInFlowAndShowsSourceOnce(SpellCardPdfLayout layout) throws Exception {
+    void repeatsHeaderAndSourceWhileKeepingHeightenedRulesInFlow(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example").level(1)
-                .publication("Pathfinder Player Core")
+                .publication("Pathfinder Player Core").actionCost("2")
                 .dice(new SpellDice("", "1d6", "+1 rank: +1d6"))
                 .description("A creature takes damage. ".repeat(50)
                         + "\n\nHeightened (+1) The damage increases by 1d6.")
@@ -123,7 +123,12 @@ class SpellCardPdfTypographyTest {
         new SpellCardPdfRenderer().render(List.of(spell), layout, output);
         try (var document = Loader.loadPDF(output.toByteArray())) {
             String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
-            assertEquals(1, text.split("Pathfinder Player Core", -1).length - 1);
+            int cards = text.split("Pathfinder Player Core", -1).length - 1;
+            assertTrue(cards > 1, text);
+            assertEquals(cards, text.split("Casting cost: 2", -1).length - 1);
+            assertEquals(cards, text.split("RANK 1", -1).length - 1);
+            assertEquals(cards - 1, text.split("Next: card ", -1).length - 1);
+            assertTrue(text.contains("PART " + cards), text);
             assertTrue(text.contains("Next: card 2"), text);
             assertTrue(text.contains("Heightened (+1) The damage increases by 1d6."), text);
             assertFalse(text.contains("Heightening:"), text);

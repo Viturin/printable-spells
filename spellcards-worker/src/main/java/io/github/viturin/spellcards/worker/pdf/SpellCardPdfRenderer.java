@@ -89,29 +89,31 @@ public class SpellCardPdfRenderer {
         boolean hasHeightenedText = HEIGHTENED.matcher(spell.description()).find();
         List<SpellCardFace.Rule> rules = face.rules().stream()
                 .filter(rule -> !hasHeightenedText || !rule.label().equals("Heightening"))
-                .filter(rule -> !rule.label().equals(SpellCardFace.DICE_HEADER)).toList();
+                .filter(rule -> !rule.label().equals(SpellCardFace.DICE_HEADER) && !rule.label().equals("Cast")).toList();
         List<Line> body = bodyLines(rules, spell.description(), regular, accent, 8.4f);
 
+        ActionBadge badge = face.badge().orElse(null);
+        String publication = printableText(spell.publication(), regular);
+        float footerSpace = publication.isBlank() ? 0 : FOOTER_SPACE;
         int bodyIndex = 0;
         for (int part = 1; part == 1 || bodyIndex < body.size(); part++) {
-            ActionBadge badge = part == 1 ? face.badge().orElse(null) : null;
             List<Line> title = new ArrayList<>();
             List<Line> type = new ArrayList<>();
-            String label = part == 1 ? face.classification() : "CONTINUED  ·  PART " + part;
-            List<String> headerDice = part == 1 ? dice : List.of();
-            float badgeHeight = badge == null && headerDice.isEmpty() ? 0 : 2 * BADGE_PADDING
+            String label = face.classification() + (part == 1 ? "" : "  ·  PART " + part);
+            float badgeHeight = badge == null && dice.isEmpty() ? 0 : 2 * BADGE_PADDING
                     + (badge == null ? 0 : BADGE_ACTION_HEIGHT)
-                    + Math.ceilDiv(headerDice.size(), DICE_PER_ROW) * DIE_SLOT;
+                    + Math.ceilDiv(dice.size(), DICE_PER_ROW) * DIE_SLOT;
             float titleWidth = badgeHeight == 0 ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - TITLE_BADGE_GAP;
             append(title, spell.name(), bold, 13, PAPER, titleWidth);
             append(type, label, bold, 7, accent);
+            if (badge == null && !spell.actionCost().isBlank()) {
+                append(type, "Cast: " + spell.actionCost(), regular, 7, accent);
+            }
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
             float titleBottom = HEADING_TOP - Math.max(titleHeight, badgeHeight) - 3;
             float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
             float bodyStart = typeBottom - BODY_INSET;
 
-            String publication = part == 1 ? printableText(spell.publication(), regular) : "";
-            float footerSpace = publication.isBlank() ? 0 : FOOTER_SPACE;
             int start = bodyIndex;
             float remaining = bodyStart - PADDING - footerSpace;
             if (part == 1) {
@@ -135,7 +137,7 @@ public class SpellCardPdfRenderer {
             }
             Footer footer = footer(publication, hasContinuation ? "Next: card " + (part + 1) : "",
                     regular, bold, accent);
-            cards.add(new Card(title, type, headerDice, body.subList(start, bodyIndex), footer, badge, spell.actionCost(),
+            cards.add(new Card(title, type, dice, body.subList(start, bodyIndex), footer, badge, spell.actionCost(),
                     badgeHeight, accent, titleBottom, typeBottom));
         }
     }
@@ -212,15 +214,13 @@ public class SpellCardPdfRenderer {
         if (publication.isBlank()) {
             return new Footer(null, next);
         }
-        if (next != null && width(regular, FOOTER_FONT_SIZE, publication) + FOOTER_GAP
-                + width(bold, FOOTER_FONT_SIZE, cue) > LINE_WIDTH) {
-            return new Footer(null, next);
-        }
+        float sourceWidth = next == null ? LINE_WIDTH
+                : LINE_WIDTH - FOOTER_GAP - width(bold, FOOTER_FONT_SIZE, cue);
         String source = publication;
-        if (width(regular, FOOTER_FONT_SIZE, source) > LINE_WIDTH) {
+        if (width(regular, FOOTER_FONT_SIZE, source) > sourceWidth) {
             do {
                 source = source.substring(0, source.offsetByCodePoints(source.length(), -1));
-            } while (width(regular, FOOTER_FONT_SIZE, source + "…") > LINE_WIDTH);
+            } while (width(regular, FOOTER_FONT_SIZE, source + "…") > sourceWidth);
             source = source.stripTrailing() + "…";
         }
         return new Footer(new Line(source, regular, FOOTER_FONT_SIZE, MUTED), next);

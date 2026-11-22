@@ -121,7 +121,7 @@ class SpellCardJobWorkerTest {
         try (var document = Loader.loadPDF(pdfPath(job.jobId()).toFile())) {
             assertTrue(document.getNumberOfPages() > 1);
             String text = new PDFTextStripper().getText(document);
-            assertTrue(text.contains("CONTINUED"));
+            assertTrue(text.contains("PART 2"));
             assertTrue(text.contains("Next: card 2"));
             assertTrue(text.replaceAll("\\s+", " ").contains("Final words."));
         }
