@@ -4,132 +4,32 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
+  pull_request_target:
+    types: [closed]
 
 permissions:
   actions: read
+  contents: write
   pull-requests: write
 
 concurrency:
-  group: visual-preview-description-${{ github.event.workflow_run.head_repository.id }}-${{ github.event.workflow_run.head_branch }}
+  group: visual-preview-description
   queue: max
 
 jobs:
   update-description:
-    if: github.event.workflow_run.event == 'pull_request'
+    if: github.event_name == 'pull_request_target' || github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Update the visual preview section from GitHub metadata
+      - uses: actions/checkout@v7
+        with:
+          # workflow_run uses the default branch SHA. Close events use the
+          # default branch explicitly, regardless of the PR target branch.
+          ref: ${{ github.event_name == 'pull_request_target' && format('refs/heads/{0}', github.event.repository.default_branch) || github.sha }}
+          persist-credentials: false
+
+      - name: Publish screenshots and update the visual preview section
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import re
-          import subprocess
-          from pathlib import Path
-
-          repo = os.environ["GITHUB_REPOSITORY"]
-          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
-          run = event["workflow_run"]
-          base_id = event["repository"]["id"]
-          head_repo = run.get("head_repository")
-
-          def api(path, *args, body=None):
-              command = ["gh", "api", f"repos/{repo}/{path}", *args]
-              payload = None
-              if body is not None:
-                  command += ["--method", "PATCH", "--input", "-"]
-                  payload = json.dumps({"body": body})
-              return json.loads(subprocess.check_output(command, input=payload, text=True))
-
-          def matches(pr):
-              head = pr["head"]
-              return (
-                  pr["state"] == "open"
-                  and pr["base"]["repo"]["id"] == base_id
-                  and (head["repo"] or {}).get("id") == head_repo["id"]
-                  and head["ref"] == run["head_branch"]
-                  and head["sha"] == run["head_sha"]
-                  and pr["created_at"] <= run["created_at"]
-              )
-
-          def main():
-              if (
-                  run["event"] != "pull_request"
-                  or run["repository"]["id"] != base_id
-                  or run["path"] != ".github/workflows/ci.yml"
-                  or not head_repo
-              ):
-                  return
-
-              associated = run["pull_requests"]
-              if associated:
-                  candidates = [api(f"pulls/{pr['number']}") for pr in associated]
-              else:
-                  # GitHub can omit the PR association for fork runs.
-                  candidates = [
-                      pr
-                      for page in api(
-                          "pulls", "--method", "GET", "--paginate", "--slurp",
-                          "-f", "state=open",
-                          "-f", f"head={head_repo['owner']['login']}:{run['head_branch']}",
-                          "-f", "per_page=100",
-                      )
-                      for pr in page
-                  ]
-              candidates = [pr for pr in candidates if matches(pr)]
-              if len(candidates) != 1:
-                  print("No unique open PR matches this run and its current head.")
-                  return
-
-              run_path = f"actions/runs/{run['id']}"
-              current_run = api(run_path)
-              if current_run["run_attempt"] != run["run_attempt"] or current_run["status"] != "completed":
-                  return
-              jobs = api(f"{run_path}/jobs?per_page=100", "--paginate", "--slurp")
-              capture = [job for page in jobs for job in page["jobs"] if job["name"] == "Visual capture"]
-              if len(capture) != 1 or capture[0]["conclusion"] == "skipped":
-                  return
-
-              conclusion = capture[0]["conclusion"]
-              if conclusion == "success":
-                  status = "Passed. Download **visual-preview** from the run’s Artifacts section."
-              elif conclusion == "cancelled":
-                  status = "Cancelled. See the run for details."
-              else:
-                  status = "Failed. See the capture job logs and any available diagnostics in **visual-preview**."
-
-              # Refresh the body and head immediately before writing.
-              pr_path = f"pulls/{candidates[0]['number']}"
-              pr = api(pr_path)
-              if not matches(pr):
-                  return
-              body = pr["body"] or ""
-              start = "<!-- visual-preview:start -->"
-              end = "<!-- visual-preview:end -->"
-              marker = re.compile(re.escape(start) + r".*?" + re.escape(end), re.DOTALL)
-              existing = marker.search(body)
-              if body.count(start) != body.count(end) or body.count(start) > 1 or (start in body and not existing):
-                  raise SystemExit("The PR description contains malformed visual preview markers.")
-
-              order = (run["run_number"], run["run_attempt"])
-              if existing:
-                  previous = re.search(r"<!-- visual-preview:run (\d+) (\d+) -->", existing[0])
-                  if previous and tuple(map(int, previous.groups())) > order:
-                      return
-
-              url = f"{os.environ['GITHUB_SERVER_URL']}/{repo}/actions/runs/{run['id']}"
-              block = (
-                  f"{start}\n<!-- visual-preview:run {order[0]} {order[1]} -->\n"
-                  f"## Visual preview\n\n[Actions run]({url}) for `{run['head_sha'][:12]}`. {status}\n{end}"
-              )
-              if existing:
-                  updated = body[:existing.start()] + block + body[existing.end():]
-              else:
-                  updated = body + ("\n\n" if body else "") + block
-              if updated != body:
-                  api(pr_path, body=updated)
-
-          main()
-          PY
+        run: python3 .github/scripts/visual-preview-description.py
