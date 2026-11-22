@@ -13,35 +13,25 @@ final class FoundrySpellDice {
             "(?i)\\b(?:make|attempt|roll) (?:an? |(?:your|another) )?(?:(?:melee|ranged) )?spell attack\\b");
     private static final Pattern ALTERNATE_DEFENSE = Pattern.compile(
             "(?i)spell attack(?: rolls?)? against [^.]{0,45}?(Fortitude|Reflex|Will) DC");
-    private static final List<String> SAVES = List.of("fortitude", "reflex", "will");
 
     private FoundrySpellDice() {
     }
 
     static SpellDice read(JsonNode system, String description, String name) {
-        var defense = system.path("defense");
         String attack = attackRoll(description);
-        var save = defense.path("save");
-        String statistic = save.path("statistic").asText("");
-        String saveRoll = SAVES.contains(statistic)
-                ? "d20 + " + statistic + " vs spell DC" + (save.path("basic").asBoolean() ? " (basic)" : "")
-                : "";
 
         // These spell variants are defined in prose and cannot be inferred from the damage entries.
         return switch (name) {
-            case "Ignition" -> new SpellDice(attack, saveRoll,
+            case "Ignition" -> new SpellDice(attack,
                     "Fire on hit: ranged 2d4 / melee 2d6. Crit: double damage + 1d4 / 1d6 persistent fire.",
                     "+1 rank: +1 die to initial and persistent damage");
-            case "Force Barrage" -> new SpellDice("", "",
+            case "Force Barrage" -> new SpellDice("",
                     "Auto-hit: 1d4+1 force per shard, 1 shard per action",
                     "+2 ranks: +1 shard per action");
-            case "Heal" -> new SpellDice("", "Undead only: " + saveRoll,
+            case "Heal" -> new SpellDice("",
                     "1d8 HP (living) or vitality damage (undead). 2 actions: +8 HP to living target.",
                     "+1 rank: +1d8 and +8 HP to the 2-action bonus");
-            case "Ray of Corruption" -> new SpellDice(attack,
-                    "Creature hit: " + saveRoll + ". Crit hit: worsen save by one degree.",
-                    baseEffects(system.path("damage")), intervalEffects(system));
-            default -> new SpellDice(attack, saveRoll,
+            default -> new SpellDice(attack,
                     baseEffects(system.path("damage")), intervalEffects(system));
         };
     }

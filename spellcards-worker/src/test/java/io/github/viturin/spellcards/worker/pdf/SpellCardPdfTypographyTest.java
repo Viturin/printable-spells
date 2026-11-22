@@ -115,7 +115,7 @@ class SpellCardPdfTypographyTest {
     void repeatsHeaderAndSourceWhileKeepingHeightenedRulesInFlow(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example").level(1)
                 .publication("Pathfinder Player Core").actionCost("2")
-                .dice(new SpellDice("", "", "1d6", "+1 rank: +1d6"))
+                .dice(new SpellDice("", "1d6", "+1 rank: +1d6"))
                 .description("A creature takes damage. ".repeat(50)
                         + "\n\nHeightened (+1) The damage increases by 1d6.")
                 .build();

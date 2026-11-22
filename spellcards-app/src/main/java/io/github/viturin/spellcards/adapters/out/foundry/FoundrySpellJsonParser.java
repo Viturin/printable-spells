@@ -67,7 +67,7 @@ public class FoundrySpellJsonParser {
                     .dice(FoundrySpellDice.read(system, description, name))
                     .kind(inferKind(system, sourcePath))
                     .actionCost(actionCost)
-                    .castingDetails(readCastingDetails(system))
+                    .castingDetails(readCastingDetails(system, name))
                     .range(range)
                     .target(target)
                     .duration(duration)
@@ -81,13 +81,13 @@ public class FoundrySpellJsonParser {
         }
     }
 
-    private SpellCastingDetails readCastingDetails(JsonNode system) {
+    private SpellCastingDetails readCastingDetails(JsonNode system, String spellName) {
         var area = system.path("area");
         var defense = system.path("defense");
         var ritual = system.path("ritual");
         return new SpellCastingDetails(
                 formatArea(area),
-                formatDefense(defense),
+                formatDefense(defense, spellName),
                 htmlToPlain(system.path("requirements").asText("")),
                 htmlToPlain(system.path("cost").path("value").asText("")),
                 htmlToPlain(system.path("trigger").asText("")),
@@ -107,7 +107,7 @@ public class FoundrySpellJsonParser {
         return distance > 0 && !type.isBlank() ? distance + "-foot " + type : type;
     }
 
-    private String formatDefense(JsonNode defense) {
+    private String formatDefense(JsonNode defense, String spellName) {
         var save = defense.path("save");
         String statistic = save.path("statistic").asText("");
         String passive = defenseName(defense.path("passive").path("statistic").asText(""));
@@ -115,6 +115,15 @@ public class FoundrySpellJsonParser {
             return passive;
         }
         String saveName = (save.path("basic").asBoolean(false) ? "Basic " : "") + defenseName(statistic);
+        String dc = save.path("dc").asText("");
+        if (!dc.isBlank()) {
+            saveName += " DC " + dc;
+        }
+        saveName = switch (spellName) {
+            case "Heal" -> saveName + " (undead only)";
+            case "Ray of Corruption" -> saveName + " (on creature hit)";
+            default -> saveName;
+        };
         return passive.isBlank() ? saveName : passive + " and " + saveName;
     }
 
