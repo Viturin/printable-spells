@@ -4,6 +4,7 @@ import io.github.viturin.spellcards.adapters.out.foundry.FoundrySpellJsonParser;
 import io.github.viturin.spellcards.application.model.SpellCardPdfLayout;
 import io.github.viturin.spellcards.domain.model.ImmutableSpell;
 import io.github.viturin.spellcards.domain.model.SpellCastingDetails;
+import io.github.viturin.spellcards.domain.model.SpellDice;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
@@ -98,6 +99,26 @@ class SpellCardPdfTypographyTest {
             assertTrue(text.contains("• Attempt a DC 11 flat check."), text);
             assertTrue(text.contains("• Apply Stunned 1."), text);
             assertTrue(text.contains("Heightened (+1) Add 1d8."), text);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(SpellCardPdfLayout.class)
+    void keepsHeightenedRulesInFlowAndShowsSourceOnce(SpellCardPdfLayout layout) throws Exception {
+        var spell = ImmutableSpell.builder().id("example").name("Example").level(1)
+                .publication("Pathfinder Player Core")
+                .dice(new SpellDice("", "", "1d6", "+1 rank: +1d6"))
+                .description("A creature takes damage. ".repeat(50)
+                        + "\n\nHeightened (+1) The damage increases by 1d6.")
+                .build();
+        var output = new ByteArrayOutputStream();
+        new SpellCardPdfRenderer().render(List.of(spell), layout, output);
+        try (var document = Loader.loadPDF(output.toByteArray())) {
+            String text = new PDFTextStripper().getText(document).replaceAll("\\s+", " ");
+            assertEquals(1, text.split("Pathfinder Player Core", -1).length - 1);
+            assertTrue(text.contains("Next: card 2"), text);
+            assertTrue(text.contains("Heightened (+1) The damage increases by 1d6."), text);
+            assertFalse(text.contains("Heightening:"), text);
         }
     }
 

@@ -63,6 +63,7 @@ public class FoundrySpellJsonParser {
                     .name(name)
                     .level(level)
                     .description(description)
+                    .publication(system.path("publication").path("title").asText("").strip())
                     .dice(FoundrySpellDice.read(system, description, name))
                     .kind(inferKind(system, sourcePath))
                     .actionCost(actionCost)
