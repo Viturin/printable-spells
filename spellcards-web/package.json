@@ -10,6 +10,7 @@
     "generate:client": "openapi-generator-cli generate -i ../spellcards-api/openapi/openapi.yaml -g typescript-fetch -o src/generated/client --additional-properties=supportsES6=true,typescriptThreePlus=true,npmName=@viturin/spellcards-client"
   },
   "dependencies": {
+    "pdfjs-dist": "6.5.438",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
