@@ -81,6 +81,10 @@ jobs:
         run: npx playwright install --with-deps chromium 2>&1 | tee "$PREVIEW_DIR/browser-install.log"
         shell: bash
 
+      - name: Install PDF rasterization tools
+        shell: bash
+        run: sudo apt-get install -y poppler-utils 2>&1 | tee "$PREVIEW_DIR/poppler-install.log"
+
       - name: Start stack and capture previews
         timeout-minutes: 8
         shell: bash
@@ -148,11 +152,11 @@ jobs:
           name: visual-preview
           path: ${{ runner.temp }}/readme-preview-input
 
-      - name: Publish the three README images together
+      - name: Publish the README images together
         shell: bash
         run: |
           preview_dir="$RUNNER_TEMP/readme-preview-input"
-          images=(card-grid.png continuation-card.png duplex-back.png)
+          images=(card-grid.png a4-duplex-front.png a4-duplex-back.png)
           for image in "${images[@]}"; do
             test -s "$preview_dir/$image"
             test "$(file --brief --mime-type "$preview_dir/$image")" = image/png

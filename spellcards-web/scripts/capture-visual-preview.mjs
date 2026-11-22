@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdir, open } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir, open, rename } from "node:fs/promises";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { chromium } from "playwright";
 
 const [baseUrl = "http://127.0.0.1:4173", outputDir = "out/visual-preview"] = process.argv.slice(2);
 const output = (name) => resolve(outputDir, name);
+const run = promisify(execFile);
 
 async function waitForCard(canvas) {
   await canvas.scrollIntoViewIfNeeded();
@@ -29,6 +32,22 @@ async function exportPdf(page, layout, filename) {
   }
 }
 
+async function captureA4Duplex(page) {
+  const pdf = "a4-duplex.pdf";
+  await exportPdf(page, "A4_SHEET", pdf);
+
+  const { stdout } = await run("pdfinfo", ["-f", "1", "-l", "2", output(pdf)]);
+  assert.match(stdout, /^Pages:\s+2$/m, "Heal should produce one front and one back sheet");
+  for (const pageNumber of [1, 2]) {
+    const size = new RegExp(String.raw`^Page\s+${pageNumber}\s+size:.* \(A4\)\r?$`, "m");
+    assert.match(stdout, size, `Sheet ${pageNumber} must be A4`);
+  }
+
+  await run("pdftoppm", ["-r", "125", "-png", output(pdf), output("a4-duplex")]);
+  await rename(output("a4-duplex-1.png"), output("a4-duplex-front.png"));
+  await rename(output("a4-duplex-2.png"), output("a4-duplex-back.png"));
+}
+
 async function capture(browser, name, viewport) {
   const page = await browser.newPage({ viewport, reducedMotion: "reduce" });
   page.setDefaultTimeout(45_000);
@@ -45,15 +64,13 @@ async function capture(browser, name, viewport) {
   try {
     await page.goto(baseUrl);
     await page.getByRole("checkbox", { name: "Double-sided" }).uncheck();
-    for (const spell of ["Insect Form", "Daze"]) {
-      await page.getByRole("searchbox", { name: "Search spells" }).fill(spell);
-      await page.getByRole("button", { name: `Add ${spell}`, exact: true }).click();
-    }
+    await page.getByRole("searchbox", { name: "Search spells" }).fill("Heal");
+    await page.getByRole("button", { name: "Add Heal", exact: true }).click();
 
     const grid = page.getByRole("list", { name: "Spell card previews" });
     await grid.waitFor();
     const tiles = grid.getByRole("listitem");
-    assert.ok(await tiles.count() >= 4, "Insect Form should produce at least three cards");
+    assert.equal(await tiles.count(), 2, "Heal should produce exactly two card faces");
     for (const tile of await tiles.all()) {
       await waitForCard(tile.locator("canvas"));
     }
@@ -64,7 +81,7 @@ async function capture(browser, name, viewport) {
 
     if (name === "desktop") {
       await grid.screenshot({ path: output("card-grid.png"), animations: "disabled" });
-      await tiles.nth(2).screenshot({ path: output("continuation-card.png") });
+      await tiles.nth(1).screenshot({ path: output("continuation-card.png") });
       await exportPdf(page, "PLAYING_CARD", "playing-cards.pdf");
       await exportPdf(page, "A4_SHEET", "a4-cut-sheets.pdf");
 
@@ -73,6 +90,7 @@ async function capture(browser, name, viewport) {
       const flipped = grid.getByRole("button", { name: "Spell card 1, back side. Show front" });
       await waitForCard(flipped.locator(".pdfCardBack canvas"));
       await flipped.screenshot({ path: output("duplex-back.png"), animations: "disabled" });
+      await captureA4Duplex(page);
     }
   } catch (error) {
     await page.screenshot({ path: output(`${name}-failure.png`), timeout: 8_000 })
