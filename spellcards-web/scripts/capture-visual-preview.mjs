@@ -8,7 +8,7 @@ import { chromium } from "playwright";
 const [baseUrl = "http://127.0.0.1:4173", outputDir = "out/visual-preview"] = process.argv.slice(2);
 const output = (name) => resolve(outputDir, name);
 const run = promisify(execFile);
-const gallerySpells = ["Heal", "Thunderstrike", "Lose the Path"];
+const gallerySpells = ["Heal", "Thunderstrike", "Gentle Landing"];
 
 async function waitForCard(canvas) {
   await canvas.scrollIntoViewIfNeeded();
@@ -74,6 +74,7 @@ async function capture(browser, name, viewport) {
     const grid = page.getByRole("list", { name: "Spell card previews" });
     await grid.waitFor();
     const tiles = grid.getByRole("listitem");
+    assert.equal(await tiles.count(), 4, "The preview gallery should fit on four card faces");
     for (const tile of await tiles.all()) {
       await waitForCard(tile.locator("canvas"));
     }

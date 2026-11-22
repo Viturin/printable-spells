@@ -6,9 +6,9 @@ Create printable Pathfinder 2e spell cards.
 
 <img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/desktop.png" alt="Printable Spells desktop view with spell search, selected spells, rendered cards, and PDF export controls" width="880">
 
-The card grid shows Heal’s variable casting cost and continuation, Thunderstrike’s damage dice, and Lose the Path’s reaction.
+The card grid shows Heal’s variable casting cost and continuation, Thunderstrike’s damage dice, and Gentle Landing’s reaction.
 
-<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/card-grid.png" alt="Preview grid with Heal and its continuation, Thunderstrike, and Lose the Path" width="880">
+<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/card-grid.png" alt="Preview grid with Heal and its continuation, Thunderstrike, and Gentle Landing" width="880">
 
 ### A4 duplex example
 
