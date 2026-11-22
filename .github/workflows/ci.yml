@@ -156,7 +156,7 @@ jobs:
         shell: bash
         run: |
           preview_dir="$RUNNER_TEMP/readme-preview-input"
-          images=(card-grid.png a4-duplex-front.png a4-duplex-back.png)
+          images=(desktop.png card-grid.png a4-duplex-front.png a4-duplex-back.png)
           for image in "${images[@]}"; do
             test -s "$preview_dir/$image"
             test "$(file --brief --mime-type "$preview_dir/$image")" = image/png
