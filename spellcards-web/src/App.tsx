@@ -261,13 +261,19 @@ export function App() {
             {hasSelection ? (
               <>
                 <ul className="selectedSpellList" aria-label="Spells in this PDF">
-                  {selectedSpells.map((spell) => (
-                    <li key={spell.id}>
-                      <span>{spell.name}</span>
-                      <button type="button" className="previewRemove" aria-label={"Remove " + spell.name}
-                        onClick={() => removeSpell(spell.id)}>Remove</button>
-                    </li>
-                  ))}
+                  {selectedSpells.map((spell) => {
+                    const dice = spell.cardPreview?.rules.find((rule) => rule.label === "Dice needed")
+                      ?.value.match(/\bd\d+\b/g);
+                    return (
+                      <li key={spell.id}>
+                        <span>{spell.name}{dice?.length ? (
+                          <span className="visuallyHidden">. Dice needed: {dice.join(", ")}.</span>
+                        ) : null}</span>
+                        <button type="button" className="previewRemove" aria-label={"Remove " + spell.name}
+                          onClick={() => removeSpell(spell.id)}>Remove</button>
+                      </li>
+                    );
+                  })}
                 </ul>
                 {inlinePdfUrl ? (
                   <Suspense fallback={<p className="emptyState" role="status">Loading PDF preview…</p>}>
