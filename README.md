@@ -2,6 +2,12 @@
 
 Create printable Pathfinder 2e spell cards.
 
+## Preview
+
+<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/card-grid.png" alt="Desktop preview grid with rendered Insect Form and Daze cards" width="880">
+
+<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/continuation-card.png" alt="Insect Form continuation card labeled Part 3" width="200"> <img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/duplex-back.png" alt="Flipped duplex back showing Part 2 of Insect Form" width="200">
+
 ## Use Spell Cards
 
 1. Search for spells and select the ones you want. Use **Import Pathbuilder JSON** to paste a character export and select known, prepared, and focus spells and rituals by name. The browser sends spell names to the catalog and reports names it cannot match.
