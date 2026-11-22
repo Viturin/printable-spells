@@ -17,6 +17,7 @@ import org.apache.pdfbox.pdmodel.interactive.viewerpreferences.PDViewerPreferenc
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -380,8 +381,14 @@ public class SpellCardPdfRenderer {
         float firstX = left + (box.width() - box.actionWidth() - gap - box.firstDice() * DIE_SLOT) / 2;
         if (card.badge() != null) {
             beginActualText(content, "Casting cost: " + card.castingCost());
-            drawLine(content, new Line(card.badge().symbols(), font, box.actionSize(), card.accent()), firstX,
-                    rowTop - (DIE_SIZE - box.actionSize()) / 2);
+            String symbols = card.badge().symbols();
+            // In a variable cost, align the diamonds rather than the separator between them.
+            String glyph = symbols.substring(0, symbols.offsetByCodePoints(0, 1));
+            int code = font.readCode(new ByteArrayInputStream(font.encode(glyph)));
+            double glyphCenter = font.getNormalizedPath(code).getBounds2D().getCenterY();
+            float baseline = rowTop - DIE_SIZE / 2 - (float) (glyphCenter * box.actionSize() / 1000);
+            drawLine(content, new Line(symbols, font, box.actionSize(), card.accent()), firstX,
+                    baseline + box.actionSize());
             content.endMarkedContent();
         }
 
