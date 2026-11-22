@@ -80,7 +80,7 @@ export function App() {
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
   const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
-  const [doubleSided, setDoubleSided] = useState(false);
+  const [doubleSided, setDoubleSided] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportRequest, setExportRequest] = useState<CreateSpellCardJobRequest | null>(null);

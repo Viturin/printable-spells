@@ -11,9 +11,9 @@ Create printable Pathfinder 2e spell cards.
 ## Use Spell Cards
 
 1. Search for spells and select the ones you want. Use **Import Pathbuilder JSON** to paste a character export and select known, prepared, and focus spells and rituals by name. The browser sends spell names to the catalog and reports names it cannot match.
-2. Check the responsive preview grid. Each tile shows a playing-card page from the PDF renderer. With **Double-sided** enabled, select a card to flip between its front and back. Long spells have numbered continuation cards that appear in order.
+2. Check the responsive preview grid. Each tile shows a playing-card page from the PDF renderer. **Double-sided** is enabled by default. Select a card to flip between its front and back, or uncheck **Double-sided** to preview and export single-sided cards. Long spells have numbered continuation cards that appear in order.
 3. Choose **Playing-card pages** or **A4 cut sheets** and click **Generate PDF**. The layout choice applies to the export. When it is ready, click **Download PDF**.
-4. Print at **Actual size** or **100%**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets fit up to nine cards and include cut guides. Enable **Double-sided** before generating the PDF to pair continuation cards with their fronts. Print double-sided with **Flip on long edge**. Cards without a continuation get a matching back.
+4. Print at **Actual size** or **100%**. Both layouts use 63.5 × 88.9 mm cards. A4 sheets fit up to nine cards and include cut guides. Double-sided exports pair continuation cards with their fronts. Print double-sided with **Flip on long edge**. Cards without a continuation get a matching back.
 
 The cast box shows action symbols and the dice the caster rolls. ◆ marks one action, ◇ marks a free action, and ↶ marks a reaction. Longer casting times are written out. Heightened effects follow the base rules.
 
