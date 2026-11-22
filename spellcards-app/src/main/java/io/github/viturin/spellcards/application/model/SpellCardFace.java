@@ -46,7 +46,6 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
         var dice = spell.dice();
         addRule(rules, DICE_HEADER, diceHeader(dice));
         addRule(rules, "Caster attack", dice.attack());
-        addRule(rules, "Target save", dice.save());
         addRule(rules, "Effect dice", dice.effect());
         addRule(rules, "Heightening", dice.heightening());
 
