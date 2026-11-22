@@ -44,6 +44,7 @@ async function capture(browser, name, viewport) {
 
   try {
     await page.goto(baseUrl);
+    await page.getByRole("checkbox", { name: "Double-sided" }).uncheck();
     for (const spell of ["Insect Form", "Daze"]) {
       await page.getByRole("searchbox", { name: "Search spells" }).fill(spell);
       await page.getByRole("button", { name: `Add ${spell}`, exact: true }).click();
