@@ -24,6 +24,7 @@ function CardPage({ pdf, pageNumber, decorative = false }: { pdf: PDFDocumentPro
         target.height = Math.ceil(viewport.height);
         rendering = page.render({ canvas: target, viewport });
         await rendering.promise;
+        if (!disposed) target.dataset.rendered = "true";
       } catch {
         if (!disposed) setError(true);
       }
@@ -37,6 +38,7 @@ function CardPage({ pdf, pageNumber, decorative = false }: { pdf: PDFDocumentPro
     observer.observe(target);
     return () => {
       disposed = true;
+      delete target.dataset.rendered;
       observer.disconnect();
       rendering?.cancel();
     };
