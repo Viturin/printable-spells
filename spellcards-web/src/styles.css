@@ -427,6 +427,55 @@ details[open] .disclosureIcon {
   height: 100%;
 }
 
+.pdfFlipHint {
+  margin: 0 4px 5px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.pdfCardFlip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  perspective: 900px;
+}
+
+.pdfCardFlip:focus-visible {
+  outline-offset: -4px;
+}
+
+.pdfCardFaces {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 280ms ease-in-out;
+}
+
+.pdfCardFaces[data-back="true"],
+.pdfCardBack {
+  transform: rotateY(180deg);
+}
+
+.pdfCardSide {
+  position: absolute;
+  inset: 0;
+  display: block;
+  backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdfCardFaces {
+    transition: none;
+  }
+}
+
 .previewRemove {
   display: block;
   min-height: 36px;
