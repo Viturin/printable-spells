@@ -272,10 +272,13 @@ export function App() {
                   {selectedSpells.map((spell) => {
                     const dice = spell.cardPreview?.rules.find((rule) => rule.label === "Dice needed")
                       ?.value.match(/\bd\d+\b/g);
+                    const duration = spell.cardPreview?.rules.find((rule) => rule.label === "Duration")?.value;
                     return (
                       <li key={spell.id}>
                         <span>{spell.name}{dice?.length ? (
                           <span className="visuallyHidden">. Dice needed: {dice.join(", ")}.</span>
+                        ) : null}{duration ? (
+                          <span className="visuallyHidden">. Duration: {duration}.</span>
                         ) : null}</span>
                         <button type="button" className="previewRemove" aria-label={"Remove " + spell.name}
                           onClick={() => removeSpell(spell.id)}>Remove</button>

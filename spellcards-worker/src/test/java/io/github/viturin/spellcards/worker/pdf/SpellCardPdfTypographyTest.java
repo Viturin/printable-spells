@@ -58,7 +58,7 @@ class SpellCardPdfTypographyTest {
     @EnumSource(SpellCardPdfLayout.class)
     void printsRuleSymbolsAndIndividualTraitChipsInGrayscaleLayouts(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(1)
-                .range("60 feet").target("1 creature").traditions(List.of("arcane", "occult"))
+                .range("60 feet").target("1 creature").duration("up to 1 minute").sustained(true).traditions(List.of("arcane", "occult"))
                 .traits(List.of("fire", "concentrate", "manipulate"))
                 .castingDetails(new SpellCastingDetails("20-foot burst", "Basic Reflex", "", "", "", "", "", ""))
                 .description("A concise effect.").build();
@@ -70,6 +70,14 @@ class SpellCardPdfTypographyTest {
             assertTrue(text.contains("↔ 60 feet"), text);
             assertTrue(text.contains("▦ 20-foot burst"), text);
             assertTrue(text.contains("◎ 1 creature"), text);
+            assertTrue(text.contains("up to 1 minute (sustained)"), text);
+            var resources = document.getPage(0).getResources();
+            boolean hasDurationLabel = false;
+            for (var name : resources.getPropertiesNames()) {
+                var label = resources.getProperties(name).getCOSObject().getString(org.apache.pdfbox.cos.COSName.ACTUAL_TEXT);
+                hasDurationLabel |= label != null && label.contains("Duration: up to 1 minute (sustained)");
+            }
+            assertTrue(hasDurationLabel);
             assertTrue(text.contains("⬟ Basic Reflex"), text);
             assertTrue(text.contains("✦ arcane, occult"), text);
             assertTrue(text.contains("fire"), text);

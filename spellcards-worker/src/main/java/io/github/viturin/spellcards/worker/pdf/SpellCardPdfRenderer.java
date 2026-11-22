@@ -242,9 +242,7 @@ public class SpellCardPdfRenderer {
                 drawLine(content, new Line(die, card.title().getFirst().font(), 8, PAPER), dieX, dieTop);
             } else {
                 fill(content, TYPE_STRIP, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
-                var text = new COSDictionary();
-                text.setString(COSName.ACTUAL_TEXT, die);
-                content.beginMarkedContent(COSName.getPDFName("Span"), PDPropertyList.create(text));
+                beginActualText(content, die);
                 content.drawImage(image, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
                 content.endMarkedContent();
             }
@@ -435,12 +433,22 @@ public class SpellCardPdfRenderer {
         return font.getStringWidth(text) * fontSize / 1000;
     }
 
+    private void beginActualText(PDPageContentStream content, String label) throws IOException {
+        var properties = new COSDictionary();
+        properties.setString(COSName.ACTUAL_TEXT, label);
+        content.beginMarkedContent(COSName.getPDFName("Span"), PDPropertyList.create(properties));
+    }
+
     private float drawLine(PDPageContentStream content, Line line, float x, float top) throws IOException {
         if (!line.chips().isEmpty()) {
             drawTraitChips(content, line, x, top);
             return top - line.height();
         }
         if (!line.text().isEmpty()) {
+            boolean duration = line.style() == LineStyle.COMPACT && line.text().contains(SpellCardFace.DURATION_SYMBOL);
+            if (duration) {
+                beginActualText(content, line.text().replace(SpellCardFace.DURATION_SYMBOL, "Duration:"));
+            }
             content.beginText();
             content.setFont(line.font(), line.fontSize());
             content.setNonStrokingColor(line.color());
@@ -451,6 +459,9 @@ public class SpellCardPdfRenderer {
                 content.showText(line.text());
             }
             content.endText();
+            if (duration) {
+                content.endMarkedContent();
+            }
         }
         return top - line.height();
     }

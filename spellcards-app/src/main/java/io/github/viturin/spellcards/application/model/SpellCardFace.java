@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 public record SpellCardFace(String classification, Optional<ActionBadge> badge, List<Rule> rules) {
+    public static final String DURATION_SYMBOL = "◷";
     public static final String DICE_HEADER = "Dice needed";
     private static final Pattern DIE = Pattern.compile("(?i)d(\\d{1,3})\\b");
     private static final Pattern VARIABLE_ACTIONS = Pattern.compile("([1-3]) (to|or) ([1-3])");
@@ -89,6 +90,7 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
             case "Range" -> "↔";
             case "Area" -> "▦";
             case "Targets" -> "◎";
+            case "Duration" -> DURATION_SYMBOL;
             case "Defense" -> "⬟";
             case "Traditions" -> "✦";
             default -> "";
