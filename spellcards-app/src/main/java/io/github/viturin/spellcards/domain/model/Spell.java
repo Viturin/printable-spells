@@ -15,6 +15,11 @@ public interface Spell {
     String description();
 
     @Value.Default
+    default String publication() {
+        return "";
+    }
+
+    @Value.Default
     default SpellDice dice() {
         return SpellDice.EMPTY;
     }

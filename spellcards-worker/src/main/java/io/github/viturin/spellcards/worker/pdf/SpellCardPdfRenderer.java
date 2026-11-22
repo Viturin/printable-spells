@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Component
 public class SpellCardPdfRenderer {
@@ -36,7 +37,10 @@ public class SpellCardPdfRenderer {
     private static final float LINE_WIDTH = CARD_WIDTH - 2 * PADDING;
     private static final float BADGE_WIDTH = 43;
     private static final float BADGE_HEIGHT = 21;
-    private static final float CONTINUATION_SPACE = 11;
+    private static final float FOOTER_SPACE = 11;
+    private static final float FOOTER_FONT_SIZE = 7;
+    private static final float FOOTER_GAP = 8;
+    private static final Pattern HEIGHTENED = Pattern.compile("^Heightened\\s*\\([^)]+\\)", Pattern.MULTILINE);
     private static final float DIE_SIZE = 14;
     private static final float DIE_SLOT = 23;
     private static final float DICE_ROW_HEIGHT = 16;
@@ -82,9 +86,11 @@ public class SpellCardPdfRenderer {
         List<String> dice = face.rules().stream().filter(rule -> rule.label().equals(SpellCardFace.DICE_HEADER))
                 .flatMap(rule -> java.util.Arrays.stream(rule.value().split(" {2,}")))
                 .map(die -> die.substring(die.lastIndexOf(' ') + 1)).toList();
+        boolean hasHeightenedText = HEIGHTENED.matcher(spell.description()).find();
         List<SpellCardFace.Rule> rules = face.rules().stream()
+                .filter(rule -> !hasHeightenedText || !rule.label().equals("Heightening"))
                 .filter(rule -> !rule.label().equals(SpellCardFace.DICE_HEADER)).toList();
-        List<Line> body = bodyLines(rules, spell.description(), regular, 8.4f);
+        List<Line> body = bodyLines(rules, spell.description(), regular, accent, 8.4f);
 
         int bodyIndex = 0;
         for (int part = 1; part == 1 || bodyIndex < body.size(); part++) {
@@ -108,11 +114,13 @@ public class SpellCardPdfRenderer {
                     diceInline ? titleHeight - lastTitleLine.height() : titleHeight);
             float bodyStart = typeBottom - BODY_INSET;
 
+            String publication = part == 1 ? printableText(spell.publication(), regular) : "";
+            float footerSpace = publication.isBlank() ? 0 : FOOTER_SPACE;
             int start = bodyIndex;
-            float remaining = bodyStart - PADDING;
+            float remaining = bodyStart - PADDING - footerSpace;
             if (part == 1) {
                 for (float largerSize : new float[]{10, 9.2f}) {
-                    var largerBody = bodyLines(rules, spell.description(), regular, largerSize);
+                    var largerBody = bodyLines(rules, spell.description(), regular, accent, largerSize);
                     if (largerBody.stream().mapToDouble(Line::height).sum() <= remaining) {
                         body = largerBody;
                         break;
@@ -123,13 +131,14 @@ public class SpellCardPdfRenderer {
                 remaining -= body.get(bodyIndex++).height();
             }
             boolean hasContinuation = bodyIndex < body.size();
-            while (hasContinuation && bodyIndex > start && remaining < CONTINUATION_SPACE) {
+            while (hasContinuation && bodyIndex > start && remaining < FOOTER_SPACE - footerSpace) {
                 remaining += body.get(--bodyIndex).height();
             }
             if (start == bodyIndex && bodyIndex < body.size()) {
                 throw new IOException("Spell heading leaves no space for card content.");
             }
-            Line footer = hasContinuation ? new Line("Continued on card " + (part + 1), bold, 7, accent) : null;
+            Footer footer = footer(publication, hasContinuation ? "Next: card " + (part + 1) : "",
+                    regular, bold, accent);
             cards.add(new Card(title, type, dicePlacement, body.subList(start, bodyIndex), footer, badge, accent, titleBottom, typeBottom));
         }
     }
@@ -190,9 +199,35 @@ public class SpellCardPdfRenderer {
         for (Line line : card.body()) {
             y = drawLine(content, line, x, y);
         }
-        if (card.footer() != null) {
-            drawLine(content, card.footer(), x, bottom + PADDING + card.footer().height());
+        if (card.footer().source() != null) {
+            Line source = card.footer().source();
+            drawLine(content, source, x, bottom + PADDING + source.height());
         }
+        if (card.footer().next() != null) {
+            Line next = card.footer().next();
+            float nextWidth = width(next.font(), next.fontSize(), next.text());
+            drawLine(content, next, x + LINE_WIDTH - nextWidth, bottom + PADDING + next.height());
+        }
+    }
+
+    private Footer footer(String publication, String cue, PDType0Font regular, PDType0Font bold, Color accent)
+            throws IOException {
+        Line next = cue.isEmpty() ? null : new Line(cue, bold, FOOTER_FONT_SIZE, accent);
+        if (publication.isBlank()) {
+            return new Footer(null, next);
+        }
+        if (next != null && width(regular, FOOTER_FONT_SIZE, publication) + FOOTER_GAP
+                + width(bold, FOOTER_FONT_SIZE, cue) > LINE_WIDTH) {
+            return new Footer(null, next);
+        }
+        String source = publication;
+        if (width(regular, FOOTER_FONT_SIZE, source) > LINE_WIDTH) {
+            do {
+                source = source.substring(0, source.offsetByCodePoints(source.length(), -1));
+            } while (width(regular, FOOTER_FONT_SIZE, source + "…") > LINE_WIDTH);
+            source = source.stripTrailing() + "…";
+        }
+        return new Footer(new Line(source, regular, FOOTER_FONT_SIZE, MUTED), next);
     }
 
     private void drawHeaderDice(PDPageContentStream content, Card card, Map<String, PDImageXObject> diceImages,
@@ -238,7 +273,7 @@ public class SpellCardPdfRenderer {
         content.stroke();
     }
 
-    private List<Line> bodyLines(List<SpellCardFace.Rule> rules, String description, PDType0Font regular, float size)
+    private List<Line> bodyLines(List<SpellCardFace.Rule> rules, String description, PDType0Font regular, Color accent, float size)
             throws IOException {
         List<Line> lines = new ArrayList<>();
         float ruleSize = size - 0.7f;
@@ -268,7 +303,8 @@ public class SpellCardPdfRenderer {
                 } else {
                     var style = paragraph.stripLeading().matches("(?s)(?:[•*-]|\\d+[.)])\\s.*")
                             ? LineStyle.COMPACT : LineStyle.PARAGRAPH;
-                    append(lines, paragraph, regular, size, INK, LINE_WIDTH, style);
+                    Color color = HEIGHTENED.matcher(paragraph).lookingAt() ? accent : INK;
+                    append(lines, paragraph, regular, size, color, LINE_WIDTH, style);
                 }
             }
         }
@@ -452,8 +488,11 @@ public class SpellCardPdfRenderer {
         content.showTextWithPositioning(positioned);
     }
 
-    private record Card(List<Line> title, List<Line> type, DicePlacement dice, List<Line> body, Line footer,
+    private record Card(List<Line> title, List<Line> type, DicePlacement dice, List<Line> body, Footer footer,
                         ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
+    }
+
+    private record Footer(Line source, Line next) {
     }
 
     private record DicePlacement(List<String> labels, int perRow, float offsetX, float offsetY) {
