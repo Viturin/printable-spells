@@ -35,17 +35,17 @@ public class SpellCardPdfRenderer {
     private static final float PADDING = 7;
     private static final float HEADING_TOP = CARD_HEIGHT - 7;
     private static final float LINE_WIDTH = CARD_WIDTH - 2 * PADDING;
-    private static final float BADGE_WIDTH = 43;
-    private static final float BADGE_HEIGHT = 21;
+    private static final float BADGE_WIDTH = 34;
+    private static final float BADGE_PADDING = 2;
+    private static final float BADGE_ACTION_HEIGHT = 10;
     private static final float FOOTER_SPACE = 11;
     private static final float FOOTER_FONT_SIZE = 7;
     private static final float FOOTER_GAP = 8;
     private static final Pattern HEIGHTENED = Pattern.compile("^Heightened\\s*\\([^)]+\\)", Pattern.MULTILINE);
-    private static final float DIE_SIZE = 14;
-    private static final float DIE_SLOT = 23;
-    private static final float DICE_ROW_HEIGHT = 16;
+    private static final float DIE_SIZE = 9;
+    private static final float DIE_SLOT = 10;
+    private static final int DICE_PER_ROW = 3;
     private static final float TITLE_BADGE_GAP = 5;
-    private static final float TITLE_DICE_GAP = 5;
     private static final List<String> ILLUSTRATED_DICE = List.of("d4", "d6", "d8", "d10", "d12", "d20");
     private static final float BODY_INSET = 4;
     // A wrapped line can stretch to twice its normal space width before the gaps get distracting.
@@ -98,20 +98,16 @@ public class SpellCardPdfRenderer {
             List<Line> title = new ArrayList<>();
             List<Line> type = new ArrayList<>();
             String label = part == 1 ? face.classification() : "CONTINUED  ·  PART " + part;
-            float titleWidth = badge == null ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - TITLE_BADGE_GAP;
+            List<String> headerDice = part == 1 ? dice : List.of();
+            float badgeHeight = badge == null && headerDice.isEmpty() ? 0 : 2 * BADGE_PADDING
+                    + (badge == null ? 0 : BADGE_ACTION_HEIGHT)
+                    + Math.ceilDiv(headerDice.size(), DICE_PER_ROW) * DIE_SLOT;
+            float titleWidth = badgeHeight == 0 ? LINE_WIDTH : LINE_WIDTH - BADGE_WIDTH - TITLE_BADGE_GAP;
             append(title, spell.name(), bold, 13, PAPER, titleWidth);
             append(type, label, bold, 7, accent);
-            List<String> headerDice = part == 1 ? dice : List.of();
-            Line lastTitleLine = title.getLast();
-            float inlineOffset = width(bold, lastTitleLine.fontSize(), lastTitleLine.text()) + TITLE_DICE_GAP;
-            int dicePerRow = Math.max(1, (int) (titleWidth / DIE_SLOT));
-            boolean diceInline = !headerDice.isEmpty() && inlineOffset + headerDice.size() * DIE_SLOT <= titleWidth;
-            float diceHeight = diceInline ? 0 : Math.ceilDiv(headerDice.size(), dicePerRow) * DICE_ROW_HEIGHT;
             float titleHeight = (float) title.stream().mapToDouble(Line::height).sum();
-            float titleBottom = HEADING_TOP - Math.max(titleHeight + diceHeight, badge == null ? 0 : BADGE_HEIGHT) - 3;
+            float titleBottom = HEADING_TOP - Math.max(titleHeight, badgeHeight) - 3;
             float typeBottom = titleBottom - (float) type.stream().mapToDouble(Line::height).sum() - 5;
-            var dicePlacement = new DicePlacement(headerDice, dicePerRow, diceInline ? inlineOffset : 0,
-                    diceInline ? titleHeight - lastTitleLine.height() : titleHeight);
             float bodyStart = typeBottom - BODY_INSET;
 
             String publication = part == 1 ? printableText(spell.publication(), regular) : "";
@@ -139,13 +135,14 @@ public class SpellCardPdfRenderer {
             }
             Footer footer = footer(publication, hasContinuation ? "Next: card " + (part + 1) : "",
                     regular, bold, accent);
-            cards.add(new Card(title, type, dicePlacement, body.subList(start, bodyIndex), footer, badge, accent, titleBottom, typeBottom));
+            cards.add(new Card(title, type, headerDice, body.subList(start, bodyIndex), footer, badge, spell.actionCost(),
+                    badgeHeight, accent, titleBottom, typeBottom));
         }
     }
 
     private void addPages(PDDocument document, List<Card> cards, SpellCardPdfLayout layout) throws IOException {
         Map<String, PDImageXObject> diceImages = new HashMap<>();
-        for (String die : cards.stream().flatMap(card -> card.dice().labels().stream()).distinct().toList()) {
+        for (String die : cards.stream().flatMap(card -> card.dice().stream()).distinct().toList()) {
             if (ILLUSTRATED_DICE.contains(die)) {
                 try (var image = getClass().getResourceAsStream("/dice/" + die + ".png")) {
                     diceImages.put(die, PDImageXObject.createFromByteArray(document, image.readAllBytes(), die));
@@ -187,10 +184,9 @@ public class SpellCardPdfRenderer {
         for (Line line : card.title()) {
             y = drawLine(content, line, x, y);
         }
-        if (card.badge() != null) {
-            drawBadge(content, card, left + CARD_WIDTH - PADDING - BADGE_WIDTH, bottom + HEADING_TOP);
+        if (card.badgeHeight() > 0) {
+            drawBadge(content, card, diceImages, left + CARD_WIDTH - PADDING - BADGE_WIDTH, bottom + HEADING_TOP);
         }
-        drawHeaderDice(content, card, diceImages, x, bottom + HEADING_TOP);
         y = bottom + card.titleBottom() - 2;
         for (Line line : card.type()) {
             y = drawLine(content, line, x, y);
@@ -228,25 +224,6 @@ public class SpellCardPdfRenderer {
             source = source.stripTrailing() + "…";
         }
         return new Footer(new Line(source, regular, FOOTER_FONT_SIZE, MUTED), next);
-    }
-
-    private void drawHeaderDice(PDPageContentStream content, Card card, Map<String, PDImageXObject> diceImages,
-                                float x, float top) throws IOException {
-        var placement = card.dice();
-        for (int index = 0; index < placement.labels().size(); index++) {
-            String die = placement.labels().get(index);
-            float dieX = x + placement.offsetX() + index % placement.perRow() * DIE_SLOT;
-            float dieTop = top - placement.offsetY() - index / placement.perRow() * DICE_ROW_HEIGHT;
-            var image = diceImages.get(die);
-            if (image == null) {
-                drawLine(content, new Line(die, card.title().getFirst().font(), 8, PAPER), dieX, dieTop);
-            } else {
-                fill(content, TYPE_STRIP, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
-                beginActualText(content, die);
-                content.drawImage(image, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
-                content.endMarkedContent();
-            }
-        }
     }
 
     private void drawCutGuides(PDPageContentStream content, float left, float top, int count) throws IOException {
@@ -339,18 +316,37 @@ public class SpellCardPdfRenderer {
         }
     }
 
-    private void drawBadge(PDPageContentStream content, Card card, float left, float top) throws IOException {
-        fill(content, TYPE_STRIP, left, top - BADGE_HEIGHT, BADGE_WIDTH, BADGE_HEIGHT);
+    private void drawBadge(PDPageContentStream content, Card card, Map<String, PDImageXObject> diceImages,
+                           float left, float top) throws IOException {
+        fill(content, TYPE_STRIP, left, top - card.badgeHeight(), BADGE_WIDTH, card.badgeHeight());
         var font = card.title().getFirst().font();
-        String symbols = card.badge().symbols();
-        float size = Math.min(9, 9 * (BADGE_WIDTH - 4) / width(font, 9, symbols));
-        drawCentered(content, new Line(symbols, font, size, card.accent()), left, top - 2);
-        drawCentered(content, new Line(card.badge().caption(), font, 5.8f, card.accent()), left, top - 12.5f);
-    }
+        float rowTop = top - BADGE_PADDING;
+        if (card.badge() != null) {
+            String symbols = card.badge().symbols();
+            float size = Math.min(8, 8 * (BADGE_WIDTH - 2 * BADGE_PADDING) / width(font, 8, symbols));
+            float offset = (BADGE_WIDTH - width(font, size, symbols)) / 2;
+            beginActualText(content, "Casting cost: " + card.castingCost());
+            drawLine(content, new Line(symbols, font, size, card.accent()), left + offset, rowTop);
+            content.endMarkedContent();
+            rowTop -= BADGE_ACTION_HEIGHT;
+        }
 
-    private void drawCentered(PDPageContentStream content, Line line, float left, float top) throws IOException {
-        float offset = (BADGE_WIDTH - width(line.font(), line.fontSize(), line.text())) / 2;
-        drawLine(content, line, left + offset, top);
+        for (int index = 0; index < card.dice().size(); index++) {
+            int column = index % DICE_PER_ROW;
+            int rowSize = Math.min(DICE_PER_ROW, card.dice().size() - index + column);
+            float dieX = left + (BADGE_WIDTH - rowSize * DIE_SLOT) / 2 + column * DIE_SLOT;
+            float dieTop = rowTop - index / DICE_PER_ROW * DIE_SLOT;
+            String die = card.dice().get(index);
+            var image = diceImages.get(die);
+            if (image == null) {
+                float size = Math.min(7, 7 * DIE_SIZE / width(font, 7, die));
+                drawLine(content, new Line(die, font, size, card.accent()), dieX, dieTop);
+            } else {
+                beginActualText(content, die);
+                content.drawImage(image, dieX, dieTop - DIE_SIZE, DIE_SIZE, DIE_SIZE);
+                content.endMarkedContent();
+            }
+        }
     }
 
     private void fill(PDPageContentStream content, Color color, float x, float y, float width, float height)
@@ -499,14 +495,11 @@ public class SpellCardPdfRenderer {
         content.showTextWithPositioning(positioned);
     }
 
-    private record Card(List<Line> title, List<Line> type, DicePlacement dice, List<Line> body, Footer footer,
-                        ActionBadge badge, Color accent, float titleBottom, float typeBottom) {
+    private record Card(List<Line> title, List<Line> type, List<String> dice, List<Line> body, Footer footer,
+                        ActionBadge badge, String castingCost, float badgeHeight, Color accent, float titleBottom, float typeBottom) {
     }
 
     private record Footer(Line source, Line next) {
-    }
-
-    private record DicePlacement(List<String> labels, int perRow, float offsetX, float offsetY) {
     }
 
     private enum LineStyle {

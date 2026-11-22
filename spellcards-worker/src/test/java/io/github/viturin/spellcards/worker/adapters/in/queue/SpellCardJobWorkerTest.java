@@ -129,13 +129,13 @@ class SpellCardJobWorkerTest {
 
     @ParameterizedTest
     @CsvSource({
-            "1, ◆",
-            "2, ◆◆",
-            "3, ◆◆◆",
-            "1 to 3, ◆–◆◆◆",
-            "2 or 3, ◆◆/◆◆◆",
-            "free, ◇",
-            "reaction, ↶",
+            "1, Casting cost: 1",
+            "2, Casting cost: 2",
+            "3, Casting cost: 3",
+            "1 to 3, Casting cost: 1 to 3",
+            "2 or 3, Casting cost: 2 or 3",
+            "free, Casting cost: free",
+            "reaction, Casting cost: reaction",
             "10 minutes, Cast: 10 minutes"
     })
     void printsCastingIconsOrTheActualCastingTimeWithRulesDetails(String actionCost, String expectedCast) throws Exception {
