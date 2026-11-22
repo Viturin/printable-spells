@@ -22,3 +22,110 @@ jobs:
 
       - name: Run full test suite with Foundry data fetch
         run: mvn -B -Pfetch-foundry-pf2e-spells verify
+
+  visual-preview:
+    name: Visual capture
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_USERNAME: preview
+      RABBITMQ_PASSWORD: preview
+    services:
+      rabbitmq:
+        image: rabbitmq:4.2
+        env:
+          RABBITMQ_DEFAULT_USER: preview
+          RABBITMQ_DEFAULT_PASS: preview
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_port_connectivity"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Set preview and job directories
+        run: |
+          {
+            echo "PREVIEW_DIR=$RUNNER_TEMP/visual-preview"
+            echo "SPELLCARDS_ARTIFACT_DIR=$RUNNER_TEMP/preview-pdf-jobs"
+          } >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Build API, worker and frontend
+        run: |
+          mkdir -p "$PREVIEW_DIR"
+          mvn -B -Pfetch-foundry-pf2e-spells,system-node -DskipTests package 2>&1 | tee "$PREVIEW_DIR/build.log"
+        shell: bash
+
+      - name: Install Chromium
+        working-directory: spellcards-web
+        run: npx playwright install --with-deps chromium 2>&1 | tee "$PREVIEW_DIR/browser-install.log"
+        shell: bash
+
+      - name: Start stack and capture previews
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          java -jar spellcards-app/target/spellcards-app-*-exec.jar > "$PREVIEW_DIR/api.log" 2>&1 &
+          api=$!
+          java -jar spellcards-worker/target/spellcards-worker-*.jar > "$PREVIEW_DIR/worker.log" 2>&1 &
+          worker=$!
+          npm --prefix spellcards-web run preview -- --host 127.0.0.1 --strictPort > "$PREVIEW_DIR/web.log" 2>&1 &
+          web=$!
+          trap 'kill "$api" "$worker" "$web" 2>/dev/null || true' EXIT
+
+          base_url=http://127.0.0.1:4173
+          curl --fail --silent --show-error --retry-connrefused --retry 30 --retry-delay 1 --max-time 5 \
+            "$base_url/api/v1/spells/search?q=Daze" > /dev/null
+          node spellcards-web/scripts/capture-visual-preview.mjs "$base_url" "$PREVIEW_DIR" \
+            2>&1 | tee "$PREVIEW_DIR/capture.log"
+
+      - name: Collect diagnostics and list artifact contents
+        if: always()
+        shell: bash
+        env:
+          RABBITMQ_CONTAINER: ${{ job.services.rabbitmq.id }}
+        run: |
+          mkdir -p "$PREVIEW_DIR"
+          if [[ -n "$RABBITMQ_CONTAINER" ]]; then
+            docker logs "$RABBITMQ_CONTAINER" > "$PREVIEW_DIR/rabbitmq.log" 2>&1 || true
+          fi
+          {
+            echo '### Visual preview'
+            echo
+            echo 'Download **visual-preview** from the Artifacts section.'
+            echo
+            for file in "$PREVIEW_DIR"/*; do
+              [[ -f "$file" ]] || continue
+              printf -- "- \`%s\`\n" "${file##*/}"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload visual preview
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-preview
+          path: ${{ env.PREVIEW_DIR }}/
+          overwrite: true
+          if-no-files-found: warn
