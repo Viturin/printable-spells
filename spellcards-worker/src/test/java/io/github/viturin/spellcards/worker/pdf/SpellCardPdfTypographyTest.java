@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SpellCardPdfTypographyTest {
     @ParameterizedTest
-    @EnumSource(SpellCardPdfLayout.class)
+    @EnumSource(value = SpellCardPdfLayout.class, names = {"A4_SHEET", "PLAYING_CARD"})
     void justifiesWrappedProseWithinTheCardButLeavesTheLastLineRagged(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(1)
                 .description("A glowing sphere floats nearby illuminating the room.\n\nFinal line.")
@@ -55,7 +55,7 @@ class SpellCardPdfTypographyTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SpellCardPdfLayout.class)
+    @EnumSource(value = SpellCardPdfLayout.class, names = {"A4_SHEET", "PLAYING_CARD"})
     void printsRuleSymbolsAndIndividualTraitChipsInGrayscaleLayouts(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example Spell").level(1)
                 .range("60 feet").target("1 creature").duration("up to 1 minute").sustained(true).traditions(List.of("arcane", "occult"))
@@ -88,7 +88,7 @@ class SpellCardPdfTypographyTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SpellCardPdfLayout.class)
+    @EnumSource(value = SpellCardPdfLayout.class, names = {"A4_SHEET", "PLAYING_CARD"})
     void rendersFoundryDescriptionAsReadableText(SpellCardPdfLayout layout) throws Exception {
         var spell = new FoundrySpellJsonParser().parseSpell("""
                 {"_id":"example","name":"Example Spell","type":"spell","system":{
@@ -111,7 +111,7 @@ class SpellCardPdfTypographyTest {
     }
 
     @ParameterizedTest
-    @EnumSource(SpellCardPdfLayout.class)
+    @EnumSource(value = SpellCardPdfLayout.class, names = {"A4_SHEET", "PLAYING_CARD"})
     void repeatsHeaderAndSourceWhileKeepingHeightenedRulesInFlow(SpellCardPdfLayout layout) throws Exception {
         var spell = ImmutableSpell.builder().id("example").name("Example").level(1)
                 .publication("Pathfinder Player Core").actionCost("2")

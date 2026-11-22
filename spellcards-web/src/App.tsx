@@ -80,6 +80,7 @@ export function App() {
   const [items, setItems] = useState<SpellSummary[]>([]);
   const [selectedSpells, setSelectedSpells] = useState<SpellSummary[]>([]);
   const [pdfLayout, setPdfLayout] = useState<SpellCardPdfLayout>("A4_SHEET");
+  const [doubleSided, setDoubleSided] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportRequest, setExportRequest] = useState<CreateSpellCardJobRequest | null>(null);
@@ -88,8 +89,12 @@ export function App() {
   const { job, retry, resumeChecking } = useSpellCardPdfJob(exportRequest);
   const exportActive = job.kind === "submitting" || job.kind === "checking";
 
+  const exportLayout: SpellCardPdfLayout = doubleSided
+    ? (pdfLayout === "A4_SHEET" ? "A4_DUPLEX" : "PLAYING_CARD_DUPLEX")
+    : pdfLayout;
+
   function generatePdf() {
-    setExportRequest({ spellNames, layout: pdfLayout });
+    setExportRequest({ spellNames, layout: exportLayout });
     retry();
   }
 
@@ -210,7 +215,7 @@ export function App() {
 
   const searchableItems = items.filter((spell) => !isSelected(spell.id));
   const previewUrl = preview.job.kind === "ready" ? preview.job.downloadUrl + "?inline=true" : undefined;
-  const exportMatchesSelection = exportRequest?.layout === pdfLayout
+  const exportMatchesSelection = exportRequest?.layout === exportLayout
     && JSON.stringify(exportRequest.spellNames) === JSON.stringify(spellNames);
   const hasSelection = selectedSpells.length > 0;
 
@@ -318,6 +323,14 @@ export function App() {
                 ? "Up to 9 cards per sheet. Print at 100% to keep the card size."
                 : "One 63.5 × 88.9 mm card per page."}
             </p>
+            <label className="pdfLayout">
+              <input type="checkbox" checked={doubleSided} onChange={(event) => setDoubleSided(event.target.checked)}
+                aria-describedby={doubleSided ? "pdf-duplex-hint" : undefined} />
+              Double-sided
+            </label>
+            {doubleSided ? (
+              <p className="pdfLayoutHint" id="pdf-duplex-hint">Print at 100% with double-sided printing set to flip on the long edge.</p>
+            ) : null}
             <div className="pdfActions">
               <button type="button" disabled={!hasSelection || exportActive} onClick={generatePdf}>
                 Generate PDF
