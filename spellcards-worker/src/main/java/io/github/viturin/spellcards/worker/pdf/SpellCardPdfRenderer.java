@@ -13,6 +13,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.documentinterchange.markedcontent.PDPropertyList;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.pdmodel.interactive.viewerpreferences.PDViewerPreferences;
 import org.springframework.stereotype.Component;
 
 import java.awt.Color;
@@ -68,11 +69,29 @@ public class SpellCardPdfRenderer {
              var boldData = getClass().getResourceAsStream("/fonts/DejaVuSans-Bold.ttf")) {
             var regular = PDType0Font.load(document, regularData);
             var bold = PDType0Font.load(document, boldData);
-            List<Card> cards = new ArrayList<>();
+            boolean duplex = layout == SpellCardPdfLayout.A4_DUPLEX || layout == SpellCardPdfLayout.PLAYING_CARD_DUPLEX;
+            boolean sheet = layout == SpellCardPdfLayout.A4_SHEET || layout == SpellCardPdfLayout.A4_DUPLEX;
+            List<Card> fronts = new ArrayList<>();
+            List<Card> backs = new ArrayList<>();
             for (Spell spell : spells) {
+                List<Card> cards = new ArrayList<>();
                 addSpellCards(cards, spell, regular, bold);
+                if (duplex) {
+                    for (int index = 0; index < cards.size(); index += 2) {
+                        Card front = cards.get(index);
+                        fronts.add(front);
+                        backs.add(index + 1 < cards.size() ? cards.get(index + 1) : front.blankBack());
+                    }
+                } else {
+                    fronts.addAll(cards);
+                }
             }
-            addPages(document, cards, layout);
+            if (duplex) {
+                var preferences = new PDViewerPreferences(new COSDictionary());
+                preferences.setDuplex(PDViewerPreferences.DUPLEX.DuplexFlipLongEdge);
+                document.getDocumentCatalog().setViewerPreferences(preferences);
+            }
+            addPages(document, fronts, backs, sheet);
             document.save(output);
         }
     }
@@ -144,32 +163,45 @@ public class SpellCardPdfRenderer {
         }
     }
 
-    private void addPages(PDDocument document, List<Card> cards, SpellCardPdfLayout layout) throws IOException {
+    private void addPages(PDDocument document, List<Card> fronts, List<Card> backs, boolean sheet)
+            throws IOException {
         Map<String, PDImageXObject> diceImages = new HashMap<>();
-        for (String die : cards.stream().flatMap(card -> card.dice().stream()).distinct().toList()) {
+        for (String die : java.util.stream.Stream.concat(fronts.stream(), backs.stream())
+                .flatMap(card -> card.dice().stream()).distinct().toList()) {
             if (ILLUSTRATED_DICE.contains(die)) {
                 try (var image = getClass().getResourceAsStream("/dice/" + die + ".png")) {
                     diceImages.put(die, PDImageXObject.createFromByteArray(document, image.readAllBytes(), die));
                 }
             }
         }
-        boolean sheet = layout == SpellCardPdfLayout.A4_SHEET;
+        int cardsPerPage = sheet ? SHEET_COLUMNS * SHEET_ROWS : 1;
+        for (int start = 0; start < fronts.size(); start += cardsPerPage) {
+            int end = Math.min(start + cardsPerPage, fronts.size());
+            drawPage(document, fronts.subList(start, end), diceImages, sheet, false);
+            if (!backs.isEmpty()) {
+                drawPage(document, backs.subList(start, end), diceImages, sheet, sheet);
+            }
+        }
+    }
+
+    private void drawPage(PDDocument document, List<Card> cards, Map<String, PDImageXObject> diceImages,
+                          boolean sheet, boolean mirrorColumns) throws IOException {
         float gridLeft = sheet ? (PDRectangle.A4.getWidth() - SHEET_COLUMNS * CARD_WIDTH) / 2 : 0;
         float gridTop = sheet ? (PDRectangle.A4.getHeight() + SHEET_ROWS * CARD_HEIGHT) / 2 : CARD_HEIGHT;
-        int cardsPerPage = sheet ? SHEET_COLUMNS * SHEET_ROWS : 1;
-        for (int start = 0; start < cards.size(); start += cardsPerPage) {
-            var page = new PDPage(sheet ? PDRectangle.A4 : new PDRectangle(CARD_WIDTH, CARD_HEIGHT));
-            document.addPage(page);
-            try (var content = new PDPageContentStream(document, page)) {
-                int count = Math.min(cardsPerPage, cards.size() - start);
-                for (int index = 0; index < count; index++) {
-                    float left = gridLeft + index % SHEET_COLUMNS * CARD_WIDTH;
-                    float bottom = gridTop - (index / SHEET_COLUMNS + 1) * CARD_HEIGHT;
-                    drawCard(content, cards.get(start + index), diceImages, left, bottom);
+        var page = new PDPage(sheet ? PDRectangle.A4 : new PDRectangle(CARD_WIDTH, CARD_HEIGHT));
+        document.addPage(page);
+        try (var content = new PDPageContentStream(document, page)) {
+            for (int index = 0; index < cards.size(); index++) {
+                int column = index % SHEET_COLUMNS;
+                if (mirrorColumns) {
+                    column = SHEET_COLUMNS - 1 - column;
                 }
-                if (sheet) {
-                    drawCutGuides(content, gridLeft, gridTop, count);
-                }
+                float left = gridLeft + column * CARD_WIDTH;
+                float bottom = gridTop - (index / SHEET_COLUMNS + 1) * CARD_HEIGHT;
+                drawCard(content, cards.get(index), diceImages, left, bottom);
+            }
+            if (sheet) {
+                drawCutGuides(content, gridLeft, gridTop, cards.size(), mirrorColumns);
             }
         }
     }
@@ -228,21 +260,23 @@ public class SpellCardPdfRenderer {
         return new Footer(new Line(source, regular, FOOTER_FONT_SIZE, MUTED), next);
     }
 
-    private void drawCutGuides(PDPageContentStream content, float left, float top, int count) throws IOException {
+    private void drawCutGuides(PDPageContentStream content, float left, float top, int count, boolean mirrorColumns) throws IOException {
         content.setStrokingColor(CUT_GUIDE);
         content.setLineWidth(0.4f);
         content.setLineDashPattern(new float[]{2, 2}, 0);
         int firstRowCount = Math.min(SHEET_COLUMNS, count);
-        content.moveTo(left, top);
-        content.lineTo(left + firstRowCount * CARD_WIDTH, top);
+        float firstRowLeft = left + (mirrorColumns ? SHEET_COLUMNS - firstRowCount : 0) * CARD_WIDTH;
+        content.moveTo(firstRowLeft, top);
+        content.lineTo(firstRowLeft + firstRowCount * CARD_WIDTH, top);
         for (int start = 0; start < count; start += SHEET_COLUMNS) {
             int columns = Math.min(SHEET_COLUMNS, count - start);
+            float rowLeft = left + (mirrorColumns ? SHEET_COLUMNS - columns : 0) * CARD_WIDTH;
             float rowTop = top - start / SHEET_COLUMNS * CARD_HEIGHT;
             float rowBottom = rowTop - CARD_HEIGHT;
-            content.moveTo(left, rowBottom);
-            content.lineTo(left + columns * CARD_WIDTH, rowBottom);
+            content.moveTo(rowLeft, rowBottom);
+            content.lineTo(rowLeft + columns * CARD_WIDTH, rowBottom);
             for (int column = 0; column <= columns; column++) {
-                float x = left + column * CARD_WIDTH;
+                float x = rowLeft + column * CARD_WIDTH;
                 content.moveTo(x, rowTop);
                 content.lineTo(x, rowBottom);
             }
@@ -525,6 +559,10 @@ public class SpellCardPdfRenderer {
 
     private record Card(List<Line> title, List<Line> type, List<String> dice, List<Line> body, Footer footer,
                         ActionBadge badge, String castingCost, CastBox castBox, Color accent, float titleBottom, float typeBottom) {
+        Card blankBack() {
+            return new Card(title, type, dice, List.of(), new Footer(footer.source(), null),
+                    badge, castingCost, castBox, accent, titleBottom, typeBottom);
+        }
     }
 
     private record CastBox(float width, float height, float actionWidth, float actionSize, int firstDice,

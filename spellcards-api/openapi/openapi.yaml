@@ -374,11 +374,13 @@ components:
 
     SpellCardPdfLayout:
       type: string
-      description: One poker-size card per page or up to nine poker-size cards per A4 cut sheet.
+      description: Playing-card pages or A4 cut sheets, with optional front and back pages arranged for long-edge duplex printing.
       default: A4_SHEET
       enum:
         - A4_SHEET
         - PLAYING_CARD
+        - A4_DUPLEX
+        - PLAYING_CARD_DUPLEX
 
     SpellCardJobStatus:
       type: string
