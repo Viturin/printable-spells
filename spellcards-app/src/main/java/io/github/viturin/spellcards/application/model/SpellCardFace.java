@@ -60,7 +60,7 @@ public record SpellCardFace(String classification, Optional<ActionBadge> badge, 
 
     private static String diceHeader(SpellDice dice) {
         var sides = new TreeSet<Integer>();
-        for (String roll : List.of(dice.attack(), dice.save(), dice.effect(), dice.heightening())) {
+        for (String roll : List.of(dice.attack(), dice.effect(), dice.heightening())) {
             var matcher = DIE.matcher(roll);
             while (matcher.find()) {
                 sides.add(Integer.parseInt(matcher.group(1)));
