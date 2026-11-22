@@ -4,9 +4,15 @@ Create printable Pathfinder 2e spell cards.
 
 ## Preview
 
-<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/card-grid.png" alt="Desktop preview grid with rendered Insect Form and Daze cards" width="880">
+<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/card-grid.png" alt="Desktop preview grid showing both faces of Heal" width="880">
 
-<img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/continuation-card.png" alt="Insect Form continuation card labeled Part 3" width="200"> <img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/duplex-back.png" alt="Flipped duplex back showing Part 2 of Insect Form" width="200">
+Heal fits on two faces of one card. These are the two pages from its A4 duplex export.
+
+| Front | Back |
+| --- | --- |
+| <img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/a4-duplex-front.png" alt="A4 front page with Heal and cut guides in the upper-left corner" width="380"> | <img src="https://raw.githubusercontent.com/Viturin/printable-spells/refs/heads/readme-previews/a4-duplex-back.png" alt="A4 back page with Heal Part 2 and cut guides in the upper-right corner" width="380"> |
+
+The back page mirrors the card placement left to right. When you flip the physical sheet along its long edge, the two faces and their cut guides line up. Print on A4 at **Actual size (100%)** with **Flip on long edge**, then cut along the guides.
 
 ## Use Spell Cards
 
